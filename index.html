@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Infinity Start - 我的起始页</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23667eea'/%3E%3Cstop offset='100%25' stop-color='%23764ba2'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='url(%23g)'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='36' font-family='Arial' fill='white'%3E∞%3C/text%3E%3C/svg%3E">
+    <link rel="icon" type="image/svg+xml" href="api.svg">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -280,8 +280,9 @@
             margin: 4px 0;
         }
 
-        /* 编辑弹窗 */
-        .edit-modal-overlay {
+        /* 编辑弹窗 / 删除确认弹窗 通用遮罩 */
+        .edit-modal-overlay,
+        .confirm-modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
@@ -297,9 +298,106 @@
             transition: opacity 0.3s;
         }
 
-        .edit-modal-overlay.active {
+        .edit-modal-overlay.active,
+        .confirm-modal-overlay.active {
             display: flex;
             opacity: 1;
+        }
+
+        /* 删除确认弹窗特有样式 */
+        .confirm-modal {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            width: 90%;
+            max-width: 360px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+            text-align: center;
+        }
+
+        .confirm-modal-overlay.active .confirm-modal {
+            transform: scale(1);
+        }
+
+        .confirm-icon {
+            font-size: 2.8rem;
+            margin-bottom: 12px;
+        }
+
+        .confirm-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .confirm-desc {
+            font-size: 0.95rem;
+            color: #888;
+            margin-bottom: 24px;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(245, 87, 108, 0.4);
+        }
+
+        /* 图标选择器 */
+        .icon-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .icon-option {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 8px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: #fafafa;
+            user-select: none;
+        }
+
+        .icon-option:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .icon-option.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102,126,234,0.08), rgba(118,75,162,0.08));
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+        }
+
+        .icon-option img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .icon-option span {
+            font-size: 0.78rem;
+            color: #555;
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .icon-option.selected span {
+            color: #667eea;
         }
 
         /* 添加按钮 */
@@ -720,6 +818,19 @@
         </div>
     </div>
 
+    <!-- 删除确认弹窗 -->
+    <div class="confirm-modal-overlay" id="confirmModal">
+        <div class="confirm-modal">
+            <div class="confirm-icon">🗑️</div>
+            <div class="confirm-title">删除网站</div>
+            <div class="confirm-desc">确定要删除这个网站吗？<br>此操作无法撤销。</div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" onclick="closeConfirmModal()">取消</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">删除</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 背景设置面板 -->
     <div class="bg-settings hidden" id="bgSettings">
         <div class="bg-settings-header">
@@ -916,6 +1027,10 @@
             document.getElementById('bgSettings').classList.toggle('hidden');
         }
 
+        // 实时更新「自动获取」图标预览 - 已移除，统一使用默认图标
+
+        // 图标类型选择 - 已移除，统一使用默认图标
+
         // 添加链接
         async function addLink() {
             const urlInput = document.getElementById('siteUrl');
@@ -948,9 +1063,8 @@
             // 使用名称或域名作为显示名称
             const name = customName || domain.replace('www.', '');
 
-            // 获取favicon
-            const favicon = await getFavicon(url);
-
+            // 统一使用默认图标
+            const favicon = 'api.svg';
             const link = {
                 id: Date.now(),
                 url: url,
@@ -966,17 +1080,7 @@
             closeModal();
         }
 
-        // 获取网站favicon
-        async function getFavicon(url) {
-            try {
-                const domain = new URL(url).hostname;
-                // 使用国内可访问的favicon服务
-                return `https://api.iowen.cn/favicon/${domain}.png`;
-            } catch (error) {
-                console.error('获取favicon失败:', error);
-                return null;
-            }
-        }
+        // 获取网站favicon - 已移除，统一使用默认图标 api.svg
 
         // 渲染链接列表
         function renderLinks() {
@@ -1047,16 +1151,14 @@
             grid.innerHTML = html;
         }
 
-        // 删除链接
+        // 删除链接（卡片上的 × 按钮）
         function deleteLink(event, id) {
             event.preventDefault();
             event.stopPropagation();
-            
-            if (confirm('确定要删除这个网站吗？')) {
-                links = links.filter(link => link.id !== id);
-                saveLinks();
-                renderLinks();
-            }
+            editingId = id;
+            const overlay = document.getElementById('confirmModal');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('active'), 10);
         }
 
         // 保存链接到localStorage
@@ -1100,31 +1202,56 @@
             }
         });
 
-        // 从右键菜单删除
+        // 从右键菜单删除 - 改为弹出自定义确认框
         function deleteLinkFromMenu() {
             if (contextTargetId === null) return;
-            if (confirm('确定要删除这个网站吗？')) {
-                links = links.filter(link => link.id !== contextTargetId);
-                saveLinks();
-                renderLinks();
-            }
-            hideContextMenu();
+            editingId = contextTargetId;
+            document.getElementById('contextMenu').classList.remove('show');
+            contextTargetId = null;
+            // 打开自定义删除确认弹窗
+            const overlay = document.getElementById('confirmModal');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.classList.add('active'), 10);
         }
+
+        // 关闭删除确认弹窗
+        function closeConfirmModal() {
+            const overlay = document.getElementById('confirmModal');
+            overlay.classList.remove('active');
+            setTimeout(() => overlay.style.display = 'none', 300);
+            editingId = null;
+        }
+
+        // 确认删除
+        function confirmDelete() {
+            if (editingId === null) return;
+            links = links.filter(link => link.id !== editingId);
+            saveLinks();
+            renderLinks();
+            closeConfirmModal();
+        }
+
+        // 正在编辑的链接 id（独立于右键菜单，不会被 hideContextMenu 清除）
+        let editingId = null;
 
         // 打开编辑弹窗
         function openEditModal() {
             if (contextTargetId === null) return;
-            const link = links.find(l => l.id === contextTargetId);
+            editingId = contextTargetId;
+            const link = links.find(l => l.id === editingId);
             if (!link) return;
 
             document.getElementById('editSiteUrl').value = link.url;
             document.getElementById('editSiteName').value = link.name;
 
+            // 先关菜单，再开弹窗
+            document.getElementById('contextMenu').classList.remove('show');
+            contextTargetId = null;
+
             const overlay = document.getElementById('editModal');
             overlay.style.display = 'flex';
             setTimeout(() => overlay.classList.add('active'), 10);
             document.getElementById('editSiteName').focus();
-            hideContextMenu();
         }
 
         // 关闭编辑弹窗
@@ -1132,12 +1259,13 @@
             const overlay = document.getElementById('editModal');
             overlay.classList.remove('active');
             setTimeout(() => overlay.style.display = 'none', 300);
+            editingId = null;
         }
 
         // 保存编辑
         async function saveEdit() {
-            if (contextTargetId === null) return;
-            const idx = links.findIndex(l => l.id === contextTargetId);
+            if (editingId === null) return;
+            const idx = links.findIndex(l => l.id === editingId);
             if (idx === -1) return;
 
             let url = document.getElementById('editSiteUrl').value.trim();
@@ -1150,21 +1278,15 @@
             try { new URL(url); } catch { alert('请输入有效的网址！'); return; }
 
             const domain = new URL(url).hostname;
-            const oldUrl = links[idx].url;
 
             links[idx].url = url;
             links[idx].name = name || domain.replace('www.', '');
             links[idx].domain = domain;
-
-            // URL 变了就重新获取 favicon
-            if (url !== oldUrl) {
-                links[idx].favicon = await getFavicon(url);
-            }
+            links[idx].favicon = 'api.svg'; // 统一使用默认图标
 
             saveLinks();
             renderLinks();
             closeEditModal();
-            contextTargetId = null;
         }
 
         // 编辑弹窗回车保存
@@ -1175,10 +1297,7 @@
             document.getElementById('editSiteName')?.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') saveEdit();
             });
-            // 点击遮罩关闭编辑弹窗
-            document.getElementById('editModal')?.addEventListener('click', (e) => {
-                if (e.target === e.currentTarget) closeEditModal();
-            });
+            // 编辑弹窗和删除确认弹窗均不响应点击遮罩关闭（防止选文字时误触）
         });
 
         // 更换背景

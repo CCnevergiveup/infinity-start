@@ -160,23 +160,46 @@
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
         }
 
-        /* 禁用的链接卡片样式 */
+        /* 禁用的链接卡片样式 - 更明显的灰度效果 */
         .link-card.disabled {
-            background: rgba(80, 80, 90, 0.35);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(40, 40, 45, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
         .link-card.disabled:hover {
-            background: rgba(80, 80, 90, 0.45);
+            background: rgba(40, 40, 45, 0.65);
         }
 
         .link-card.disabled .link-icon-wrapper {
-            opacity: 0.6;
-            filter: grayscale(0.4);
+            opacity: 0.4;
+            filter: grayscale(0.8);
+            background: rgba(200, 200, 200, 0.9);
         }
 
         .link-card.disabled .link-title {
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        /* 禁用状态的水印标识 */
+        .link-card.disabled::after {
+            content: '已禁用';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.6);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .link-card.disabled:hover::after {
+            opacity: 1;
         }
 
         .link-icon-wrapper {
@@ -1325,7 +1348,7 @@
         function renderLinks() {
             const grid = document.getElementById('linksGrid');
             
-            // 过滤链接
+            // 过滤链接（搜索时不过滤禁用状态，显示所有匹配的）
             let filteredLinks = links;
             if (searchKeyword) {
                 filteredLinks = links.filter(link => 
@@ -1334,10 +1357,12 @@
                 );
             }
             
-            // 排序：启用的在前，禁用的在后
+            // 对展示结果进行排序：启用的在前，禁用的在后
             filteredLinks.sort((a, b) => {
-                if (a.enabled === b.enabled) return 0;
-                return a.enabled ? -1 : 1;
+                const aEnabled = a.enabled !== false;
+                const bEnabled = b.enabled !== false;
+                if (aEnabled === bEnabled) return 0;
+                return aEnabled ? -1 : 1;
             });
             
             let html = '';
@@ -1348,21 +1373,37 @@
                     const isDisabled = link.enabled === false;
                     const cardClass = isDisabled ? 'link-card disabled' : 'link-card';
                     const clickHandler = isDisabled ? 'onclick="event.preventDefault(); showContextMenu(event, ' + link.id + ');"' : 'oncontextmenu="showContextMenu(event, ' + link.id + ')"';
-                    const hrefAttr = isDisabled ? '' : `href="${link.url}" target="_blank"`;
                     
-                    return `
-                    <div ${hrefAttr} class="${cardClass}" title="${link.name}${isDisabled ? ' (已禁用)' : ''}"
-                       ${clickHandler}>
-                        <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
-                        <div class="link-icon-wrapper">
-                            <img src="${link.favicon}" 
-                                 alt="${link.name}" 
-                                 class="link-icon"
-                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');">
+                    if (isDisabled) {
+                        // 禁用的用 div，点击打开右键菜单
+                        return `
+                        <div class="${cardClass}" title="${link.name} (已禁用)"
+                           onclick="event.preventDefault(); showContextMenu(event, ${link.id});">
+                            <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
+                            <div class="link-icon-wrapper">
+                                <img src="${link.favicon}" 
+                                     alt="${link.name}" 
+                                     class="link-icon"
+                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');">
+                            </div>
+                            <div class="link-title">${link.name}</div>
                         </div>
-                        <div class="link-title">${link.name}</div>
-                    </div>
-                `}).join('');
+                    `} else {
+                        // 启用的用 a 标签，支持点击跳转
+                        return `
+                        <a href="${link.url}" target="_blank" class="${cardClass}" title="${link.name}"
+                           oncontextmenu="showContextMenu(event, ${link.id})">
+                            <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
+                            <div class="link-icon-wrapper">
+                                <img src="${link.favicon}" 
+                                     alt="${link.name}" 
+                                     class="link-icon"
+                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');">
+                            </div>
+                            <div class="link-title">${link.name}</div>
+                        </a>
+                    `}
+                }).join('');
             } else if (searchKeyword) {
                 // 搜索无结果
                 html = `

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinity Start - 我的起始页</title>
+    <title>公益集</title>
     <link rel="icon" type="image/svg+xml" href="api.svg">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -158,6 +158,25 @@
             background: rgba(255, 255, 255, 0.25);
             transform: translateY(-4px) scale(1.02);
             box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 禁用的链接卡片样式 */
+        .link-card.disabled {
+            background: rgba(80, 80, 90, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .link-card.disabled:hover {
+            background: rgba(80, 80, 90, 0.45);
+        }
+
+        .link-card.disabled .link-icon-wrapper {
+            opacity: 0.6;
+            filter: grayscale(0.4);
+        }
+
+        .link-card.disabled .link-title {
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .link-icon-wrapper {
@@ -499,6 +518,66 @@
             display: flex;
             gap: 12px;
             margin-top: 8px;
+        }
+
+        /* 启用/禁用开关样式 */
+        .toggle-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 0;
+            margin-bottom: 8px;
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 28px;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #e0e0e0;
+            border-radius: 28px;
+            transition: all 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.3s;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(24px);
         }
 
         .btn {
@@ -936,6 +1015,14 @@
             </div>
             <input type="text" class="modal-input" id="editSiteUrl" placeholder="网址">
             <input type="text" class="modal-input" id="editSiteName" placeholder="显示名称">
+            <!-- 启用/禁用开关 -->
+            <div class="toggle-wrapper">
+                <span class="toggle-label">启用网站</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="editSiteEnabled" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeEditModal()">取消</button>
                 <button class="btn btn-primary" onclick="saveEdit()">保存</button>
@@ -969,7 +1056,6 @@
         <!-- 壁纸分类 -->
         <div class="bg-categories">
             <button class="bg-category active" onclick="switchCategory('普通')">普通</button>
-            <button class="bg-category" onclick="switchCategory('人物')">人物</button>
             <button class="bg-category" onclick="switchCategory('凡人')">凡人</button>
         </div>
         
@@ -1061,41 +1147,35 @@
         // 壁纸配置
         const wallpaperConfig = {
             '普通': [
-                '05de2cb3d4f0c4279c5865573ca090c0.jpg', '1024337.jpg', '1024942.jpg',
-                '124402-106.jpg', '228039-106.jpg', '289029-106.jpg',
-                '340259-106.jpg', '350933-106.jpg', '73634202_p0.jpg',
-                '8244baf212e210ce647ec4f2cc1e5faa.jpg', 'OFQ另类风格壁纸 - 1.jpg',
-                'bfd1b0e87d2f461288e4f09a4ecc1ed1.jpg', 'wallhaven-0jepq4.jpg',
-                'wallhaven-1j7z19.jpg', 'wallhaven-2813r9.png', 'wallhaven-3zkow9.jpg',
-                'wallhaven-3zovvv.jpg', 'wallhaven-3zqdjv.jpg', 'wallhaven-438w60.jpg',
-                'wallhaven-6kv966.jpg', 'wallhaven-723vge.jpg', 'wallhaven-83lq62.jpg',
-                'wallhaven-9mj6jd.jpg', 'wallhaven-9mo7kw.jpg', 'wallhaven-e76pew.png',
-                'wallhaven-e76poo.jpg', 'wallhaven-gp7mq3.jpg', 'wallhaven-j5mz95.png',
-                'wallhaven-k762j7.png', 'wallhaven-l38gmr.jpg', 'wallhaven-l3pqe2.jpg',
-                'wallhaven-l3zyg2.png', 'wallhaven-lmxmxy.png', 'wallhaven-o31o2p.png',
-                'wallhaven-pkgkkp.png', 'wallhaven-pkgokm.jpg', 'wallhaven-v9qm8l.jpg',
-                'wallhaven-x8dx9l.jpg', 'wallhaven-y8el9d.jpg', 'wallhaven-ymym6g.jpg'
-            ],
-            '人物': [
-                '008p8C8Aly1hfdvkomnauj31hc0u8b2b.jpg', '1024457.png', '1025069.png',
-                '192b3c55778a353b6131eb1dd7c93570.jpg', '20200627183814.jpg',
-                '282090-0.jpg', '327296-106.jpg', '350904-106.jpg', '976013.jpg',
-                '996654.jpg', 'f3fdfbcabfe308d8f0206c35cfd2fadf.jpg',
-                'wallhaven-28v8wm.jpg', 'wallhaven-28wy7m.jpg', 'wallhaven-2kppx9.jpg',
-                'wallhaven-3zoeev.jpg', 'wallhaven-3zzy7v.jpg', 'wallhaven-5797d3.jpg',
-                'wallhaven-6kdyqx.jpg', 'wallhaven-6qojp6.png', 'wallhaven-7268ro.jpg',
-                'wallhaven-72gzz3.jpg', 'wallhaven-72pqze.jpg', 'wallhaven-83l2ej.jpg',
-                'wallhaven-8o3m71.jpg', 'wallhaven-8old32.jpg', 'wallhaven-dg79dl.png',
-                'wallhaven-e7g71w.jpg', 'wallhaven-k787kq.jpg', 'wallhaven-k7x1o7.jpg',
-                'wallhaven-m9ey79.jpg', 'wallhaven-oxqzqm.jpg', 'wallhaven-pkg8ye.jpg',
-                'wallhaven-q26vzd.jpg', 'wallhaven-q2drq7.jpg', 'wallhaven-r2kmd1.jpg',
-                'wallhaven-rd35yq.jpg', 'wallhaven-rdodkw.jpg', 'wallhaven-rdq3v1.jpg',
-                'wallhaven-v9vgl8.jpg', 'wallhaven-v9wevl.jpg', 'wallhaven-vgw898.jpg',
-                'wallhaven-wed6k6.png', 'wallhaven-wqov66.jpg', 'wallhaven-wyzzlp.jpg',
-                'wallhaven-x88ql3.jpg', 'wallhaven-xlxqxz.jpg', 'wallhaven-ymyp9k.jpg',
-                'wallhaven-z8832o.jpg', 'wallhaven-z8m3yg.jpg', 'wallhaven-z8mq8y.jpg',
-                'wallhaven-zmkwmv.jpg',
-                '车子 少女 女生 绑辫子 唯美好看4k动漫壁纸_彼岸图网.jpg'
+                '05de2cb3d4f0c4279c5865573ca090c0.jpg',
+                '1024942.jpg',
+                '289029-106.jpg',
+                '8244baf212e210ce647ec4f2cc1e5faa.jpg',
+                'wallhaven-1j7z19.jpg',
+                'wallhaven-2813r9.png',
+                'wallhaven-3zkow9.jpg',
+                'wallhaven-3zovvv.jpg',
+                'wallhaven-3zqdjv.jpg',
+                'wallhaven-438w60.jpg',
+                'wallhaven-6kv966.jpg',
+                'wallhaven-723vge.jpg',
+                'wallhaven-83lq62.jpg',
+                'wallhaven-9mj6jd.jpg',
+                'wallhaven-9mo7kw.jpg',
+                'wallhaven-e76poo.jpg',
+                'wallhaven-gp7mq3.jpg',
+                'wallhaven-j5mz95.png',
+                'wallhaven-k762j7.png',
+                'wallhaven-l38gmr.jpg',
+                'wallhaven-l3pqe2.jpg',
+                'wallhaven-l3zyg2.png',
+                'wallhaven-lmxmxy.png',
+                'wallhaven-o31o2p.png',
+                'wallhaven-pkgkkp.png',
+                'wallhaven-pkgokm.jpg',
+                'wallhaven-v9qm8l.jpg',
+                'wallhaven-x8dx9l.jpg',
+                'wallhaven-ymym6g.jpg'
             ],
             '凡人': [
                 '1040g0k031jr87ak3jq205ps66nf2325d71n5eso.png',
@@ -1104,7 +1184,9 @@
                 '1040g34o31jush0q33q205ps66nf2325d5rahf1g.png',
                 '65135216e96729e64c8c0e6dad41585226798031.jpg',
                 'cf1581e3cce29f071191a7ca8541305b26798031.jpg',
-                '宋玉1.jpg', '宋玉2.jpg', '宋玉3.jpg'
+                '宋玉1.jpg',
+                '宋玉2.jpg',
+                '宋玉3.jpg'
             ]
         };
         
@@ -1227,6 +1309,7 @@
                 name: name,
                 domain: domain,
                 favicon: favicon,
+                enabled: true,
                 addedAt: new Date().toISOString()
             };
 
@@ -1251,13 +1334,25 @@
                 );
             }
             
+            // 排序：启用的在前，禁用的在后
+            filteredLinks.sort((a, b) => {
+                if (a.enabled === b.enabled) return 0;
+                return a.enabled ? -1 : 1;
+            });
+            
             let html = '';
             
             // 渲染已有链接
             if (filteredLinks.length > 0) {
-                html += filteredLinks.map(link => `
-                    <a href="${link.url}" target="_blank" class="link-card" title="${link.name}"
-                       oncontextmenu="showContextMenu(event, ${link.id})">
+                html += filteredLinks.map(link => {
+                    const isDisabled = link.enabled === false;
+                    const cardClass = isDisabled ? 'link-card disabled' : 'link-card';
+                    const clickHandler = isDisabled ? 'onclick="event.preventDefault(); showContextMenu(event, ' + link.id + ');"' : 'oncontextmenu="showContextMenu(event, ' + link.id + ')"';
+                    const hrefAttr = isDisabled ? '' : `href="${link.url}" target="_blank"`;
+                    
+                    return `
+                    <div ${hrefAttr} class="${cardClass}" title="${link.name}${isDisabled ? ' (已禁用)' : ''}"
+                       ${clickHandler}>
                         <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
                         <div class="link-icon-wrapper">
                             <img src="${link.favicon}" 
@@ -1266,8 +1361,8 @@
                                  onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');">
                         </div>
                         <div class="link-title">${link.name}</div>
-                    </a>
-                `).join('');
+                    </div>
+                `}).join('');
             } else if (searchKeyword) {
                 // 搜索无结果
                 html = `
@@ -1399,6 +1494,8 @@
 
             document.getElementById('editSiteUrl').value = link.url;
             document.getElementById('editSiteName').value = link.name;
+            // 设置启用状态（默认为 true，兼容旧数据）
+            document.getElementById('editSiteEnabled').checked = link.enabled !== false;
 
             // 先关菜单，再开弹窗
             document.getElementById('contextMenu').classList.remove('show');
@@ -1426,6 +1523,7 @@
 
             let url = document.getElementById('editSiteUrl').value.trim();
             const name = document.getElementById('editSiteName').value.trim();
+            const enabled = document.getElementById('editSiteEnabled').checked;
 
             if (!url) { alert('请输入网址！'); return; }
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -1439,6 +1537,7 @@
             links[idx].name = name || domain.replace('www.', '');
             links[idx].domain = domain;
             links[idx].favicon = 'api.svg'; // 统一使用默认图标
+            links[idx].enabled = enabled;
 
             saveLinks();
             renderLinks();

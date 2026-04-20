@@ -202,6 +202,57 @@
             opacity: 1;
         }
 
+        /* 位置徽章（毛玻璃风格，仅启用组） */
+        .position-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            border-radius: 11px;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+            pointer-events: none;
+            z-index: 2;
+            letter-spacing: -0.2px;
+        }
+
+        .position-badge.rank-high {
+            background: rgba(245, 87, 108, 0.75);
+        }
+
+        .position-badge.rank-mid {
+            background: rgba(255, 152, 0, 0.7);
+        }
+
+        .position-badge.rank-normal {
+            background: rgba(102, 126, 234, 0.65);
+        }
+
+        /* 拖拽状态 */
+        .link-card.dragging {
+            opacity: 0.4;
+        }
+
+        .link-card.drag-over {
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.6);
+        }
+
+        /* 分组间距 */
+        #disabledTitle {
+            margin-top: 24px;
+        }
+
         .link-icon-wrapper {
             width: 56px;
             height: 56px;
@@ -990,9 +1041,13 @@
 
         <!-- 链接区域 -->
         <div class="links-section">
-            <div class="section-title">常用网站</div>
-            <div class="links-grid" id="linksGrid">
-                <!-- 链接卡片会在这里渲染 -->
+            <div class="section-title" id="enabledTitle">常用网站</div>
+            <div class="links-grid" id="enabledGrid">
+                <!-- 启用卡片会在这里渲染 -->
+            </div>
+            <div class="section-title" id="disabledTitle" style="display:none;">已禁用</div>
+            <div class="links-grid" id="disabledGrid">
+                <!-- 禁用卡片会在这里渲染 -->
             </div>
         </div>
     </div>
@@ -1116,8 +1171,16 @@
     </div>
 
     <script>
+        // 数据迁移：给旧数据补 order 字段
+        function migrateLinks(arr) {
+            return arr.map((link, idx) => ({
+                ...link,
+                order: typeof link.order === 'number' ? link.order : idx
+            }));
+        }
+
         // 存储链接的数组
-        let links = JSON.parse(localStorage.getItem('myLinks')) || [];
+        let links = migrateLinks(JSON.parse(localStorage.getItem('myLinks')) || []);
         
         // 搜索关键词
         let searchKeyword = '';
@@ -1326,6 +1389,9 @@
 
             // 统一使用默认图标
             const favicon = 'api.svg';
+            // 计算启用组最大 order，新增放到末尾
+            const enabledOrders = links.filter(l => l.enabled !== false).map(l => l.order ?? 0);
+            const maxOrder = enabledOrders.length > 0 ? Math.max(...enabledOrders) : -1;
             const link = {
                 id: Date.now(),
                 url: url,
@@ -1333,6 +1399,7 @@
                 domain: domain,
                 favicon: favicon,
                 enabled: true,
+                order: maxOrder + 1,
                 addedAt: new Date().toISOString()
             };
 
@@ -1344,103 +1411,209 @@
 
         // 获取网站favicon - 已移除，统一使用默认图标 api.svg
 
+        // 根据位置返回徽章 CSS class
+        function getBadgeClass(position) {
+            if (position <= 3) return 'rank-high';
+            if (position <= 10) return 'rank-mid';
+            return 'rank-normal';
+        }
+
+        // 渲染单个卡片（启用/禁用通用）
+        function renderCard(link, position) {
+            const iconFallback = "this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');";
+
+            if (link.enabled === false) {
+                return `
+                    <div class="link-card disabled" data-id="${link.id}" draggable="true"
+                         title="${link.name} (已禁用)"
+                         onclick="event.preventDefault(); showContextMenu(event, ${link.id});">
+                        <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
+                        <div class="link-icon-wrapper">
+                            <img src="${link.favicon}" alt="${link.name}" class="link-icon"
+                                 onerror="${iconFallback}">
+                        </div>
+                        <div class="link-title">${link.name}</div>
+                    </div>
+                `;
+            }
+
+            const badgeHtml = position !== null
+                ? `<div class="position-badge ${getBadgeClass(position)}">${position}</div>`
+                : '';
+            return `
+                <a href="${link.url}" target="_blank" class="link-card" data-id="${link.id}" draggable="true"
+                   title="${link.name}"
+                   oncontextmenu="showContextMenu(event, ${link.id})">
+                    ${badgeHtml}
+                    <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
+                    <div class="link-icon-wrapper">
+                        <img src="${link.favicon}" alt="${link.name}" class="link-icon"
+                             onerror="${iconFallback}">
+                    </div>
+                    <div class="link-title">${link.name}</div>
+                </a>
+            `;
+        }
+
         // 渲染链接列表
         function renderLinks() {
-            const grid = document.getElementById('linksGrid');
-            
-            // 过滤链接（搜索时不过滤禁用状态，显示所有匹配的）
-            let filteredLinks = links;
+            const enabledGrid = document.getElementById('enabledGrid');
+            const disabledGrid = document.getElementById('disabledGrid');
+            const enabledTitle = document.getElementById('enabledTitle');
+            const disabledTitle = document.getElementById('disabledTitle');
+
+            // 过滤（搜索）
+            let filtered = links;
             if (searchKeyword) {
-                filteredLinks = links.filter(link => 
+                filtered = links.filter(link =>
                     link.name.toLowerCase().includes(searchKeyword) ||
                     link.domain.toLowerCase().includes(searchKeyword)
                 );
             }
-            
-            // 对展示结果进行排序：启用的在前，禁用的在后
-            filteredLinks.sort((a, b) => {
-                const aEnabled = a.enabled !== false;
-                const bEnabled = b.enabled !== false;
-                if (aEnabled === bEnabled) return 0;
-                return aEnabled ? -1 : 1;
-            });
-            
-            let html = '';
-            
-            // 渲染已有链接
-            if (filteredLinks.length > 0) {
-                html += filteredLinks.map(link => {
-                    const isDisabled = link.enabled === false;
-                    const cardClass = isDisabled ? 'link-card disabled' : 'link-card';
-                    const clickHandler = isDisabled ? 'onclick="event.preventDefault(); showContextMenu(event, ' + link.id + ');"' : 'oncontextmenu="showContextMenu(event, ' + link.id + ')"';
-                    
-                    if (isDisabled) {
-                        // 禁用的用 div，点击打开右键菜单
-                        return `
-                        <div class="${cardClass}" title="${link.name} (已禁用)"
-                           onclick="event.preventDefault(); showContextMenu(event, ${link.id});">
-                            <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
-                            <div class="link-icon-wrapper">
-                                <img src="${link.favicon}" 
-                                     alt="${link.name}" 
-                                     class="link-icon"
-                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');">
-                            </div>
-                            <div class="link-title">${link.name}</div>
-                        </div>
-                    `} else {
-                        // 启用的用 a 标签，支持点击跳转
-                        return `
-                        <a href="${link.url}" target="_blank" class="${cardClass}" title="${link.name}"
-                           oncontextmenu="showContextMenu(event, ${link.id})">
-                            <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
-                            <div class="link-icon-wrapper">
-                                <img src="${link.favicon}" 
-                                     alt="${link.name}" 
-                                     class="link-icon"
-                                     onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');">
-                            </div>
-                            <div class="link-title">${link.name}</div>
-                        </a>
-                    `}
-                }).join('');
-            } else if (searchKeyword) {
-                // 搜索无结果
-                html = `
+
+            // 分组 + 排序
+            const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0);
+            const enabledLinks = filtered.filter(l => l.enabled !== false).sort(byOrder);
+            const disabledLinks = filtered.filter(l => l.enabled === false).sort(byOrder);
+
+            // 添加按钮（非搜索状态下显示）
+            const addCardHtml = !searchKeyword ? `
+                <div class="link-card add-card" onclick="openModal()" title="添加网站">
+                    <div class="add-icon">+</div>
+                    <div class="link-title">添加</div>
+                </div>
+            ` : '';
+
+            // 全部为空 + 非搜索 → 第一格为添加卡片，下方一行提示
+            if (links.length === 0 && !searchKeyword) {
+                enabledTitle.textContent = '常用网站';
+                enabledGrid.innerHTML = `
+                    <div class="link-card add-card" onclick="openModal()" title="添加网站">
+                        <div class="add-icon">+</div>
+                        <div class="link-title">添加</div>
+                    </div>
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">📭</div>
+                        <h3>还没有添加任何网站</h3>
+                        <p>点击上方"添加"开始收藏</p>
+                    </div>
+                `;
+                disabledTitle.style.display = 'none';
+                disabledGrid.innerHTML = '';
+                return;
+            }
+
+            // 搜索无结果
+            if (searchKeyword && enabledLinks.length === 0 && disabledLinks.length === 0) {
+                enabledTitle.textContent = '常用网站';
+                enabledGrid.innerHTML = `
                     <div class="empty-state" style="grid-column: 1/-1;">
                         <div class="empty-state-icon">🔍</div>
                         <h3>未找到匹配的网站</h3>
                         <p>尝试其他关键词</p>
                     </div>
                 `;
+                disabledTitle.style.display = 'none';
+                disabledGrid.innerHTML = '';
+                return;
             }
-            
-            // 添加按钮（只在非搜索状态下显示，或始终显示）
-            if (!searchKeyword) {
-                html += `
-                    <div class="link-card add-card" onclick="openModal()" title="添加网站">
-                        <div class="add-icon">+</div>
-                        <div class="link-title">添加</div>
-                    </div>
-                `;
+
+            // 渲染启用组
+            enabledTitle.textContent = `常用网站 (${enabledLinks.length})`;
+            const enabledHtml = enabledLinks.map((link, idx) => renderCard(link, idx + 1)).join('');
+            enabledGrid.innerHTML = enabledHtml + addCardHtml;
+
+            // 渲染禁用组
+            if (disabledLinks.length > 0) {
+                disabledTitle.style.display = '';
+                disabledTitle.textContent = `已禁用 (${disabledLinks.length})`;
+                disabledGrid.innerHTML = disabledLinks.map(link => renderCard(link, null)).join('');
+            } else {
+                disabledTitle.style.display = 'none';
+                disabledGrid.innerHTML = '';
             }
-            
-            // 空状态（无链接时）
-            if (links.length === 0 && !searchKeyword) {
-                html = `
-                    <div class="empty-state" style="grid-column: 1/-1;">
-                        <div class="empty-state-icon">📭</div>
-                        <h3>还没有添加任何网站</h3>
-                        <p>点击"添加"按钮开始添加</p>
-                    </div>
-                    <div class="link-card add-card" onclick="openModal()" title="添加网站">
-                        <div class="add-icon">+</div>
-                        <div class="link-title">添加</div>
-                    </div>
-                `;
-            }
-            
-            grid.innerHTML = html;
+
+            // 附加拖拽处理器
+            attachDragHandlers();
+        }
+
+        // ===== 拖拽排序 =====
+        let draggedId = null;
+
+        function attachDragHandlers() {
+            document.querySelectorAll('.link-card[draggable="true"]').forEach(card => {
+                card.addEventListener('dragstart', handleDragStart);
+                card.addEventListener('dragover', handleDragOver);
+                card.addEventListener('dragleave', handleDragLeave);
+                card.addEventListener('drop', handleDrop);
+                card.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedId = parseInt(this.dataset.id);
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(draggedId));
+        }
+
+        function handleDragOver(e) {
+            if (draggedId === null) return;
+            const targetId = parseInt(this.dataset.id);
+            if (targetId === draggedId) return;
+
+            const dragged = links.find(l => l.id === draggedId);
+            const target = links.find(l => l.id === targetId);
+            if (!dragged || !target) return;
+            // 跨组忽略
+            if ((dragged.enabled !== false) !== (target.enabled !== false)) return;
+
+            e.preventDefault();
+            this.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.classList.remove('drag-over');
+
+            if (draggedId === null) return;
+            const targetId = parseInt(this.dataset.id);
+            if (targetId === draggedId) return;
+
+            const dragged = links.find(l => l.id === draggedId);
+            const target = links.find(l => l.id === targetId);
+            if (!dragged || !target) return;
+            if ((dragged.enabled !== false) !== (target.enabled !== false)) return;
+
+            // 同组内重排 + 紧凑化 order
+            const isEnabled = dragged.enabled !== false;
+            const group = links.filter(l => (l.enabled !== false) === isEnabled)
+                                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            const fromIdx = group.findIndex(l => l.id === draggedId);
+            const toIdx = group.findIndex(l => l.id === targetId);
+            if (fromIdx === -1 || toIdx === -1) return;
+
+            const [removed] = group.splice(fromIdx, 1);
+            group.splice(toIdx, 0, removed);
+
+            group.forEach((l, idx) => {
+                const item = links.find(link => link.id === l.id);
+                if (item) item.order = idx;
+            });
+
+            saveLinks();
+            renderLinks();
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+            draggedId = null;
         }
 
         // 删除链接（卡片上的 × 按钮）
@@ -1574,11 +1747,22 @@
 
             const domain = new URL(url).hostname;
 
+            const wasEnabled = links[idx].enabled !== false;
+
             links[idx].url = url;
             links[idx].name = name || domain.replace('www.', '');
             links[idx].domain = domain;
             links[idx].favicon = 'api.svg'; // 统一使用默认图标
             links[idx].enabled = enabled;
+
+            // 启用状态切换时，把它放到目标组末尾
+            if (wasEnabled !== enabled) {
+                const targetOrders = links
+                    .filter((l, i) => i !== idx && (l.enabled !== false) === enabled)
+                    .map(l => l.order ?? 0);
+                const maxOrder = targetOrders.length > 0 ? Math.max(...targetOrders) : -1;
+                links[idx].order = maxOrder + 1;
+            }
 
             saveLinks();
             renderLinks();
@@ -1774,7 +1958,7 @@
 
                 // 恢复数据
                 if (data.links) {
-                    links = data.links;
+                    links = migrateLinks(data.links);
                     saveLinks();
                     renderLinks();
                 }

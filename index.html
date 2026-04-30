@@ -141,6 +141,189 @@
             margin-bottom: 40px;
         }
 
+        .type-section {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 12px;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.06);
+            transition: background 0.2s, border-color 0.2s, transform 0.2s;
+        }
+
+        .type-section.drag-over {
+            background: rgba(102, 126, 234, 0.16);
+            border-color: rgba(102, 126, 234, 0.45);
+        }
+
+        .type-group-title {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 6px 4px 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+            cursor: grab;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .type-group-title:active {
+            cursor: grabbing;
+        }
+
+        .type-group-title.dragging {
+            opacity: 0.45;
+            transform: scale(0.98);
+        }
+
+        .type-group-title .drag-hint {
+            font-size: 0.72rem;
+            color: rgba(255, 255, 255, 0.45);
+            margin-left: auto;
+            font-weight: 400;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .type-section:hover .drag-hint {
+            opacity: 1;
+        }
+
+        .type-group-title .type-count {
+            background: rgba(255, 255, 255, 0.16);
+            border-radius: 12px;
+            padding: 2px 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .type-management {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .type-management-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .type-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .type-tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 16px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            color: #333;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .type-tag-default {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.18), rgba(118, 75, 162, 0.16));
+            border-color: rgba(102, 126, 234, 0.55);
+            color: #4c51bf;
+            font-weight: 600;
+        }
+
+        .type-tag-default::after {
+            content: '默认';
+            padding: 1px 6px;
+            border-radius: 10px;
+            background: rgba(102, 126, 234, 0.18);
+            color: #667eea;
+            font-size: 0.68rem;
+            font-weight: 600;
+        }
+
+        .type-tag-delete {
+            background: transparent;
+            border: none;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            font-size: 10px;
+            color: #666;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .type-tag-delete:hover {
+            background: rgba(255, 80, 80, 0.2);
+            color: #d32f2f;
+        }
+
+        .type-add-form {
+            display: flex;
+            gap: 8px;
+        }
+
+        .type-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
+            background: white;
+            color: #333;
+            font-size: 0.85rem;
+            font-family: monospace;
+            letter-spacing: 0.5px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            min-width: 0;
+        }
+
+        .type-input::placeholder {
+            color: #999;
+        }
+
+        .type-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .type-add-btn {
+            padding: 10px 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .type-add-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
         .link-card {
             background: rgba(255, 255, 255, 0.15);
             backdrop-filter: blur(20px);
@@ -586,6 +769,93 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .custom-select {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            font-size: 1rem;
+            margin-bottom: 16px;
+            transition: all 0.3s;
+            font-family: inherit;
+            background: white;
+            cursor: pointer;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+            box-sizing: border-box;
+        }
+
+        .custom-select:hover {
+            border-color: #ccc;
+        }
+
+        .custom-select.open {
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .custom-select-value {
+            color: #333;
+            flex: 1;
+        }
+
+        .custom-select-value.placeholder {
+            color: #999;
+        }
+
+        .custom-select-arrow {
+            color: #999;
+            font-size: 0.9rem;
+            margin-left: 8px;
+            transition: transform 0.2s;
+        }
+
+        .custom-select.open .custom-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .custom-select-options {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            z-index: 10;
+            overflow: hidden;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .custom-select.open .custom-select-options {
+            display: block;
+        }
+
+        .custom-select-option {
+            padding: 12px 18px;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 0.95rem;
+            color: #333;
+        }
+
+        .custom-select-option:hover {
+            background: #f5f5f5;
+        }
+
+        .custom-select-option.selected {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+            font-weight: 500;
         }
 
         .modal-buttons {
@@ -1041,7 +1311,6 @@
 
         <!-- 链接区域 -->
         <div class="links-section">
-            <div class="section-title" id="enabledTitle">常用网站</div>
             <div class="links-grid" id="enabledGrid">
                 <!-- 启用卡片会在这里渲染 -->
             </div>
@@ -1061,6 +1330,12 @@
             </div>
             <input type="text" class="modal-input" id="siteUrl" placeholder="输入网址（如：github.com）">
             <input type="text" class="modal-input" id="siteName" placeholder="自定义名称（可选）">
+            <input type="hidden" id="siteType" value="">
+            <div class="custom-select" id="siteTypeSelect" onclick="toggleCustomSelect(this)">
+                <span class="custom-select-value">选择类型</span>
+                <span class="custom-select-arrow">▾</span>
+                <div class="custom-select-options"></div>
+            </div>
             <div class="modal-buttons">
                 <button class="btn btn-secondary" onclick="closeModal()">取消</button>
                 <button class="btn btn-primary" onclick="addLink()">添加</button>
@@ -1093,6 +1368,12 @@
             </div>
             <input type="text" class="modal-input" id="editSiteUrl" placeholder="网址">
             <input type="text" class="modal-input" id="editSiteName" placeholder="显示名称">
+            <input type="hidden" id="editSiteType" value="">
+            <div class="custom-select" id="editSiteTypeSelect" onclick="toggleCustomSelect(this)">
+                <span class="custom-select-value">选择类型</span>
+                <span class="custom-select-arrow">▾</span>
+                <div class="custom-select-options"></div>
+            </div>
             <!-- 启用/禁用开关 -->
             <div class="toggle-wrapper">
                 <span class="toggle-label">启用网站</span>
@@ -1141,6 +1422,21 @@
             <!-- 壁纸缩略图会在这里动态生成 -->
         </div>
 
+        <!-- 类型管理 -->
+        <div class="type-management">
+            <div class="type-management-title">
+                <span>📋</span>
+                <span>类型管理</span>
+            </div>
+            <div class="type-list" id="typeList">
+                <!-- 类型列表会在这里动态生成 -->
+            </div>
+            <div class="type-add-form">
+                <input type="text" class="type-input" id="newTypeInput" placeholder="输入新类型名称">
+                <button class="type-add-btn" onclick="addNewType()">添加</button>
+            </div>
+        </div>
+
         <!-- 数据同步设置 -->
         <div class="sync-section">
             <div class="sync-title">
@@ -1171,19 +1467,223 @@
     </div>
 
     <script>
-        // 数据迁移：给旧数据补 order 字段
+        // 默认类型配置
+        const DEFAULT_SITE_TYPE = 'API';
+        const DEFAULT_TYPES = [DEFAULT_SITE_TYPE, '图片生成'];
+
+        // 类型配置管理
+        let siteTypes = JSON.parse(localStorage.getItem('siteTypes')) || [...DEFAULT_TYPES];
+
+        const LEGACY_DEFAULT_TYPES = ['工具', '其他'];
+        const SITE_TYPES_VERSION = '2';
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function normalizeSiteTypes(types, removeLegacyTypes) {
+            const normalized = [];
+            const source = Array.isArray(types) && types.length > 0 ? types : DEFAULT_TYPES;
+            source.forEach(type => {
+                if (type && !normalized.includes(type) && (!removeLegacyTypes || !LEGACY_DEFAULT_TYPES.includes(type))) {
+                    normalized.push(type);
+                }
+            });
+            DEFAULT_TYPES.forEach(type => {
+                if (!normalized.includes(type)) {
+                    normalized.push(type);
+                }
+            });
+            return normalized;
+        }
+
+        function loadSiteTypes() {
+            const saved = localStorage.getItem('siteTypes');
+            const typesVersion = localStorage.getItem('siteTypesVersion');
+            const removeLegacyTypes = typesVersion !== SITE_TYPES_VERSION;
+            if (saved) {
+                try {
+                    siteTypes = normalizeSiteTypes(JSON.parse(saved), removeLegacyTypes);
+                } catch (e) {
+                    siteTypes = [...DEFAULT_TYPES];
+                }
+            } else {
+                siteTypes = [...DEFAULT_TYPES];
+            }
+            localStorage.setItem('siteTypesVersion', SITE_TYPES_VERSION);
+            saveSiteTypes();
+            return siteTypes;
+        }
+
+        function saveSiteTypes() {
+            localStorage.setItem('siteTypes', JSON.stringify(siteTypes));
+        }
+
+        // 数据迁移：给旧数据补 order 和 type 字段
         function migrateLinks(arr) {
+            const validTypes = normalizeSiteTypes(siteTypes, false);
             return arr.map((link, idx) => ({
                 ...link,
-                order: typeof link.order === 'number' ? link.order : idx
+                order: typeof link.order === 'number' ? link.order : idx,
+                type: validTypes.includes(link.type) ? link.type : DEFAULT_SITE_TYPE
             }));
         }
 
         // 存储链接的数组
+        loadSiteTypes();
         let links = migrateLinks(JSON.parse(localStorage.getItem('myLinks')) || []);
-        
+        saveLinks();
+
         // 搜索关键词
         let searchKeyword = '';
+
+        // 填充自定义下拉框
+        function populateCustomSelect(selectId, hiddenId, currentValue) {
+            const container = document.getElementById(selectId);
+            const hidden = document.getElementById(hiddenId);
+            const optionsDiv = container.querySelector('.custom-select-options');
+            const valueSpan = container.querySelector('.custom-select-value');
+
+            // 构建选项
+            let optionsHtml = siteTypes.map(type => {
+                const escapedType = escapeHtml(type);
+                return `<div class="custom-select-option ${type === currentValue ? 'selected' : ''}" data-value="${escapedType}" onclick="selectCustomOption(event, this, '${hiddenId}')">${escapedType}</div>`;
+            }).join('');
+            // 旧数据兼容
+            if (currentValue && !siteTypes.includes(currentValue)) {
+                const escapedValue = escapeHtml(currentValue);
+                optionsHtml += `<div class="custom-select-option selected" data-value="${escapedValue}" onclick="selectCustomOption(event, this, '${hiddenId}')">${escapedValue}</div>`;
+            }
+            optionsDiv.innerHTML = optionsHtml;
+
+            hidden.value = currentValue || '';
+            if (currentValue) {
+                valueSpan.textContent = currentValue;
+                valueSpan.classList.remove('placeholder');
+            } else {
+                valueSpan.textContent = '选择类型';
+                valueSpan.classList.add('placeholder');
+            }
+        }
+
+        function toggleCustomSelect(el) {
+            // 关闭其他已打开的下拉框
+            document.querySelectorAll('.custom-select.open').forEach(s => {
+                if (s !== el) s.classList.remove('open');
+            });
+            el.classList.toggle('open');
+        }
+
+        function selectCustomOption(event, optionEl, hiddenId) {
+            event.stopPropagation();
+            const value = optionEl.dataset.value;
+            const container = optionEl.closest('.custom-select');
+            const hidden = document.getElementById(hiddenId);
+            const valueSpan = container.querySelector('.custom-select-value');
+
+            hidden.value = value;
+            valueSpan.textContent = value;
+            valueSpan.classList.remove('placeholder');
+
+            // 更新选中状态
+            container.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+            optionEl.classList.add('selected');
+            container.classList.remove('open');
+        }
+
+        // 点击外部关闭自定义下拉框
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.custom-select')) {
+                document.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+            }
+        });
+
+        // 渲染类型管理列表
+        function renderTypeList() {
+            const typeList = document.getElementById('typeList');
+            if (!typeList) return;
+
+            const managementTypes = [
+                DEFAULT_SITE_TYPE,
+                ...siteTypes.filter(type => type !== DEFAULT_SITE_TYPE)
+            ];
+            typeList.innerHTML = managementTypes.map(type => {
+                const index = siteTypes.indexOf(type);
+                const escapedType = escapeHtml(type);
+                const isDefaultType = type === DEFAULT_SITE_TYPE;
+                const deleteButton = isDefaultType
+                    ? ''
+                    : `<button class="type-tag-delete" onclick="removeTypeByIndex(${index})" title="删除">×</button>`;
+                return `
+                    <div class="type-tag ${isDefaultType ? 'type-tag-default' : ''}">
+                        <span>${escapedType}</span>
+                        ${deleteButton}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 添加新类型
+        function addNewType() {
+            const input = document.getElementById('newTypeInput');
+            const typeName = input.value.trim();
+
+            if (!typeName) {
+                alert('请输入类型名称！');
+                return;
+            }
+
+            if (siteTypes.includes(typeName)) {
+                alert('该类型已存在！');
+                return;
+            }
+
+            siteTypes.push(typeName);
+            saveSiteTypes();
+            renderTypeList();
+            input.value = '';
+        }
+
+        function removeTypeByIndex(index) {
+            const typeName = siteTypes[index];
+            if (!typeName) return;
+            removeType(typeName);
+        }
+
+        // 删除类型
+        function removeType(typeName) {
+            if (typeName === DEFAULT_SITE_TYPE) {
+                alert('默认 API 类型不能删除！');
+                return;
+            }
+
+            if (siteTypes.length <= 1) {
+                alert('至少保留一个类型！');
+                return;
+            }
+
+            if (!confirm(`确定要删除类型"${typeName}"吗？\n已使用该类型的网站将变为"${DEFAULT_SITE_TYPE}"类型。`)) {
+                return;
+            }
+
+            // 删除类型后，已使用该类型的网站固定回退到默认 API 类型
+            links.forEach(link => {
+                if (link.type === typeName) {
+                    link.type = DEFAULT_SITE_TYPE;
+                }
+            });
+            saveLinks();
+
+            siteTypes = siteTypes.filter(t => t !== typeName);
+            saveSiteTypes();
+            renderTypeList();
+            renderLinks();
+        }
 
         // 页面加载时渲染
         document.addEventListener('DOMContentLoaded', () => {
@@ -1196,6 +1696,9 @@
             if (savedBg) {
                 applyBackground(savedBg);
             }
+
+            // 渲染类型管理列表
+            renderTypeList();
 
             // 搜索框输入事件（实时过滤）
             document.getElementById('searchInput').addEventListener('input', (e) => {
@@ -1336,6 +1839,7 @@
         // 打开添加弹窗
         function openModal() {
             document.getElementById('addModal').classList.add('active');
+            populateCustomSelect('siteTypeSelect', 'siteType', DEFAULT_SITE_TYPE);
             document.getElementById('siteUrl').focus();
         }
 
@@ -1344,6 +1848,7 @@
             document.getElementById('addModal').classList.remove('active');
             document.getElementById('siteUrl').value = '';
             document.getElementById('siteName').value = '';
+            document.getElementById('siteTypeSelect').classList.remove('open');
         }
 
         // 切换背景设置面板
@@ -1359,9 +1864,11 @@
         async function addLink() {
             const urlInput = document.getElementById('siteUrl');
             const nameInput = document.getElementById('siteName');
-            
+            const typeSelect = document.getElementById('siteType');
+
             let url = urlInput.value.trim();
             const customName = nameInput.value.trim();
+            const type = typeSelect.value;
 
             if (!url) {
                 alert('请输入网址！');
@@ -1383,7 +1890,7 @@
 
             // 提取域名
             const domain = new URL(url).hostname;
-            
+
             // 使用名称或域名作为显示名称
             const name = customName || domain.replace('www.', '');
 
@@ -1399,6 +1906,7 @@
                 domain: domain,
                 favicon: favicon,
                 enabled: true,
+                type: type,
                 order: maxOrder + 1,
                 addedAt: new Date().toISOString()
             };
@@ -1421,18 +1929,21 @@
         // 渲染单个卡片（启用/禁用通用）
         function renderCard(link, position) {
             const iconFallback = "this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E🔗%3C/text%3E%3C/svg%3E'; this.classList.add('error');";
+            const safeName = escapeHtml(link.name);
+            const safeUrl = escapeHtml(link.url);
+            const safeFavicon = escapeHtml(link.favicon);
 
             if (link.enabled === false) {
                 return `
                     <div class="link-card disabled" data-id="${link.id}" draggable="true"
-                         title="${link.name} (已禁用)"
+                         title="${safeName} (已禁用)"
                          onclick="event.preventDefault(); showContextMenu(event, ${link.id});">
                         <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
                         <div class="link-icon-wrapper">
-                            <img src="${link.favicon}" alt="${link.name}" class="link-icon"
+                            <img src="${safeFavicon}" alt="${safeName}" class="link-icon"
                                  onerror="${iconFallback}">
                         </div>
-                        <div class="link-title">${link.name}</div>
+                        <div class="link-title">${safeName}</div>
                     </div>
                 `;
             }
@@ -1441,16 +1952,16 @@
                 ? `<div class="position-badge ${getBadgeClass(position)}">${position}</div>`
                 : '';
             return `
-                <a href="${link.url}" target="_blank" class="link-card" data-id="${link.id}" draggable="true"
-                   title="${link.name}"
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="link-card" data-id="${link.id}" draggable="true"
+                   title="${safeName}"
                    oncontextmenu="showContextMenu(event, ${link.id})">
                     ${badgeHtml}
                     <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
                     <div class="link-icon-wrapper">
-                        <img src="${link.favicon}" alt="${link.name}" class="link-icon"
+                        <img src="${safeFavicon}" alt="${safeName}" class="link-icon"
                              onerror="${iconFallback}">
                     </div>
-                    <div class="link-title">${link.name}</div>
+                    <div class="link-title">${safeName}</div>
                 </a>
             `;
         }
@@ -1459,7 +1970,6 @@
         function renderLinks() {
             const enabledGrid = document.getElementById('enabledGrid');
             const disabledGrid = document.getElementById('disabledGrid');
-            const enabledTitle = document.getElementById('enabledTitle');
             const disabledTitle = document.getElementById('disabledTitle');
 
             // 过滤（搜索）
@@ -1486,7 +1996,6 @@
 
             // 全部为空 + 非搜索 → 第一格为添加卡片，下方一行提示
             if (links.length === 0 && !searchKeyword) {
-                enabledTitle.textContent = '常用网站';
                 enabledGrid.innerHTML = `
                     <div class="link-card add-card" onclick="openModal()" title="添加网站">
                         <div class="add-icon">+</div>
@@ -1505,7 +2014,6 @@
 
             // 搜索无结果
             if (searchKeyword && enabledLinks.length === 0 && disabledLinks.length === 0) {
-                enabledTitle.textContent = '常用网站';
                 enabledGrid.innerHTML = `
                     <div class="empty-state" style="grid-column: 1/-1;">
                         <div class="empty-state-icon">🔍</div>
@@ -1518,10 +2026,62 @@
                 return;
             }
 
-            // 渲染启用组
-            enabledTitle.textContent = `常用网站 (${enabledLinks.length})`;
-            const enabledHtml = enabledLinks.map((link, idx) => renderCard(link, idx + 1)).join('');
-            enabledGrid.innerHTML = enabledHtml + addCardHtml;
+            // 按类型分组启用的网站
+            const typeGroups = {};
+            enabledLinks.forEach(link => {
+                const type = link.type || DEFAULT_SITE_TYPE;
+                if (!typeGroups[type]) {
+                    typeGroups[type] = [];
+                }
+                typeGroups[type].push(link);
+            });
+
+            // 渲染启用组（按类型分组）
+            let enabledHtml = '';
+
+            // 保持类型的配置顺序
+            const orderedTypes = siteTypes.filter(type => typeGroups[type]);
+            // 添加配置外的类型（如果有的话）
+            Object.keys(typeGroups).forEach(type => {
+                if (!orderedTypes.includes(type)) {
+                    orderedTypes.push(type);
+                }
+            });
+
+            let addCardAdded = false;
+            orderedTypes.forEach((type, typeIndex) => {
+                const linksInType = typeGroups[type];
+                if (linksInType && linksInType.length > 0) {
+                    let typePosition = 1;
+                    let cardsHtml = linksInType.map(link => renderCard(link, typePosition++)).join('');
+
+                    // 第一个分类末尾添加添加按钮
+                    if (typeIndex === 0 && !searchKeyword) {
+                        cardsHtml += addCardHtml;
+                        addCardAdded = true;
+                    }
+
+                    const escapedType = escapeHtml(type);
+                    enabledHtml += `
+                        <div class="type-section" data-type="${escapedType}">
+                            <div class="type-group-title" draggable="true" data-type="${escapedType}">
+                                <span>⋮⋮</span>
+                                <span>${escapedType}</span>
+                                <span class="type-count">${linksInType.length}</span>
+                                <span class="drag-hint">拖动分组排序</span>
+                            </div>
+                            ${cardsHtml}
+                        </div>
+                    `;
+                }
+            });
+
+            // 如果没有分类显示但有添加按钮
+            if (!addCardAdded && !searchKeyword) {
+                enabledHtml += addCardHtml;
+            }
+
+            enabledGrid.innerHTML = enabledHtml;
 
             // 渲染禁用组
             if (disabledLinks.length > 0) {
@@ -1535,6 +2095,79 @@
 
             // 附加拖拽处理器
             attachDragHandlers();
+            attachTypeGroupDragHandlers();
+        }
+
+        // ===== 类型分组拖拽排序 =====
+        let draggedGroupType = null;
+
+        function attachTypeGroupDragHandlers() {
+            document.querySelectorAll('.type-group-title[draggable="true"]').forEach(title => {
+                title.addEventListener('dragstart', handleGroupDragStart);
+                title.addEventListener('dragend', handleGroupDragEnd);
+            });
+            document.querySelectorAll('.type-section').forEach(section => {
+                section.addEventListener('dragover', handleGroupDragOver);
+                section.addEventListener('dragleave', handleGroupDragLeave);
+                section.addEventListener('drop', handleGroupDrop);
+            });
+        }
+
+        function handleGroupDragStart(e) {
+            draggedGroupType = this.dataset.type;
+            this.classList.add('dragging');
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/site-type', draggedGroupType);
+        }
+
+        function handleGroupDragOver(e) {
+            if (!draggedGroupType) return;
+            const targetType = e.currentTarget.dataset.type;
+            if (!targetType || targetType === draggedGroupType) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleGroupDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleGroupDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('drag-over');
+            if (!draggedGroupType) return;
+            const targetType = e.currentTarget.dataset.type;
+            if (!targetType || targetType === draggedGroupType) return;
+
+            const visibleTypes = Array.from(document.querySelectorAll('.type-section'))
+                .map(section => section.dataset.type)
+                .filter(Boolean);
+            const ordered = siteTypes.filter(type => !visibleTypes.includes(type));
+            const fromIdx = visibleTypes.indexOf(draggedGroupType);
+            const targetIdx = visibleTypes.indexOf(targetType);
+            if (fromIdx === -1 || targetIdx === -1) return;
+
+            const reorderedVisibleTypes = visibleTypes.filter(type => type !== draggedGroupType);
+            const adjustedTargetIdx = reorderedVisibleTypes.indexOf(targetType);
+            if (adjustedTargetIdx === -1) return;
+
+            const insertIdx = fromIdx < targetIdx ? adjustedTargetIdx + 1 : adjustedTargetIdx;
+            reorderedVisibleTypes.splice(insertIdx, 0, draggedGroupType);
+            siteTypes = normalizeSiteTypes([...reorderedVisibleTypes, ...ordered], false);
+
+            saveSiteTypes();
+            renderLinks();
+            renderTypeList();
+        }
+
+        function handleGroupDragEnd(e) {
+            document.querySelectorAll('.type-group-title').forEach(t => t.classList.remove('dragging'));
+            document.querySelectorAll('.type-section').forEach(t => t.classList.remove('drag-over'));
+            draggedGroupType = null;
         }
 
         // ===== 拖拽排序 =====
@@ -1553,6 +2186,7 @@
         function handleDragStart(e) {
             draggedId = parseInt(this.dataset.id);
             this.classList.add('dragging');
+            e.stopPropagation();
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', String(draggedId));
         }
@@ -1565,8 +2199,9 @@
             const dragged = links.find(l => l.id === draggedId);
             const target = links.find(l => l.id === targetId);
             if (!dragged || !target) return;
-            // 跨组忽略
+            // 跨启用/禁用组或跨类型忽略
             if ((dragged.enabled !== false) !== (target.enabled !== false)) return;
+            if (dragged.enabled !== false && (dragged.type || DEFAULT_SITE_TYPE) !== (target.type || DEFAULT_SITE_TYPE)) return;
 
             e.preventDefault();
             this.classList.add('drag-over');
@@ -1577,11 +2212,11 @@
         }
 
         function handleDrop(e) {
+            if (draggedId === null) return;
             e.preventDefault();
             e.stopPropagation();
             this.classList.remove('drag-over');
 
-            if (draggedId === null) return;
             const targetId = parseInt(this.dataset.id);
             if (targetId === draggedId) return;
 
@@ -1589,11 +2224,16 @@
             const target = links.find(l => l.id === targetId);
             if (!dragged || !target) return;
             if ((dragged.enabled !== false) !== (target.enabled !== false)) return;
+            if (dragged.enabled !== false && (dragged.type || DEFAULT_SITE_TYPE) !== (target.type || DEFAULT_SITE_TYPE)) return;
 
             // 同组内重排 + 紧凑化 order
             const isEnabled = dragged.enabled !== false;
-            const group = links.filter(l => (l.enabled !== false) === isEnabled)
-                                .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            const group = links.filter(l => {
+                const sameEnabledState = (l.enabled !== false) === isEnabled;
+                if (!sameEnabledState) return false;
+                if (!isEnabled) return true;
+                return (l.type || DEFAULT_SITE_TYPE) === (dragged.type || DEFAULT_SITE_TYPE);
+            }).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             const fromIdx = group.findIndex(l => l.id === draggedId);
             const toIdx = group.findIndex(l => l.id === targetId);
             if (fromIdx === -1 || toIdx === -1) return;
@@ -1708,6 +2348,7 @@
 
             document.getElementById('editSiteUrl').value = link.url;
             document.getElementById('editSiteName').value = link.name;
+            populateCustomSelect('editSiteTypeSelect', 'editSiteType', link.type || DEFAULT_SITE_TYPE);
             // 设置启用状态（默认为 true，兼容旧数据）
             document.getElementById('editSiteEnabled').checked = link.enabled !== false;
 
@@ -1726,6 +2367,7 @@
             const overlay = document.getElementById('editModal');
             overlay.classList.remove('active');
             setTimeout(() => overlay.style.display = 'none', 300);
+            document.getElementById('editSiteTypeSelect').classList.remove('open');
             editingId = null;
         }
 
@@ -1738,6 +2380,7 @@
             let url = document.getElementById('editSiteUrl').value.trim();
             const name = document.getElementById('editSiteName').value.trim();
             const enabled = document.getElementById('editSiteEnabled').checked;
+            const type = document.getElementById('editSiteType').value;
 
             if (!url) { alert('请输入网址！'); return; }
             if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -1754,6 +2397,7 @@
             links[idx].domain = domain;
             links[idx].favicon = 'api.svg'; // 统一使用默认图标
             links[idx].enabled = enabled;
+            links[idx].type = type;
 
             // 启用状态切换时，把它放到目标组末尾
             if (wasEnabled !== enabled) {
@@ -1898,7 +2542,8 @@
             try {
                 const data = {
                     links: links,
-                    wallpaper: localStorage.getItem('currentWallpaper') || ''
+                    wallpaper: localStorage.getItem('currentWallpaper') || '',
+                    siteTypes: siteTypes
                 };
 
                 const response = await fetch(`https://api.github.com/gists/${gistId}`, {
@@ -1957,6 +2602,12 @@
                 }
 
                 // 恢复数据
+                if (data.siteTypes && Array.isArray(data.siteTypes) && data.siteTypes.length > 0) {
+                    // 合并类型：远程类型 + 本地类型（去重）
+                    siteTypes = normalizeSiteTypes([...new Set([...data.siteTypes, ...siteTypes])], false);
+                    saveSiteTypes();
+                    renderTypeList();
+                }
                 if (data.links) {
                     links = migrateLinks(data.links);
                     saveLinks();

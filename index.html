@@ -152,6 +152,8 @@
             border-radius: 18px;
             background: rgba(255, 255, 255, 0.06);
             transition: background 0.2s, border-color 0.2s, transform 0.2s;
+            content-visibility: auto;
+            contain-intrinsic-size: auto 180px;
         }
 
         .type-section.drag-over {
@@ -412,13 +414,12 @@
         }
 
         .link-card {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.18);
             border-radius: 18px;
             padding: 20px 12px;
             text-align: center;
             text-decoration: none;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             cursor: pointer;
@@ -487,8 +488,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(102, 126, 234, 0.78);
             border: 1px solid rgba(255, 255, 255, 0.35);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
             text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
@@ -1314,6 +1314,49 @@
             text-decoration: underline;
         }
 
+        .sync-conflict-list {
+            max-height: 50vh;
+            overflow-y: auto;
+            margin: 16px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+        }
+
+        .sync-conflict-item {
+            padding: 12px;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            background: #fafafa;
+        }
+
+        .sync-conflict-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .sync-conflict-field {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .sync-conflict-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: #444;
+        }
+
+        .sync-more-actions {
+            display: none;
+            margin-top: 8px;
+        }
+
         .last-sync {
             font-size: 0.75rem;
             color: #999;
@@ -1509,6 +1552,20 @@
         </div>
     </div>
 
+    <!-- 同步冲突处理弹窗 -->
+    <div class="confirm-modal-overlay" id="syncConflictModal">
+        <div class="confirm-modal" style="max-width: 680px;">
+            <div class="confirm-icon">🔀</div>
+            <div class="confirm-title">处理同步冲突</div>
+            <div class="confirm-desc">本地和云端修改了同一项，请选择需要保留的内容。</div>
+            <div class="sync-conflict-list" id="syncConflictList"></div>
+            <div class="modal-buttons">
+                <button class="btn btn-secondary" id="syncConflictCancel">取消</button>
+                <button class="btn btn-primary" id="syncConflictApply">应用并同步</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 背景设置面板 -->
     <div class="bg-settings hidden" id="bgSettings">
         <div class="bg-settings-header">
@@ -1554,18 +1611,26 @@
                 未连接 - 数据仅保存在当前浏览器
             </div>
             <div id="syncLoginForm">
-                <input type="password" class="token-input" id="githubToken" placeholder="粘贴 GitHub Token">
+                <input type="password" class="token-input" id="githubToken" placeholder="粘贴 GitHub Token" autocomplete="off">
                 <div class="token-help">
-                    获取 Token：<a href="https://github.com/settings/tokens/new?scopes=gist&description=Infinity%20Start%20Sync" target="_blank">点击创建</a>（勾选 gist 权限）
+                    获取 Token：<a href="https://github.com/settings/tokens/new?scopes=gist&description=Infinity%20Start%20Sync" target="_blank" rel="noopener noreferrer">点击创建</a>（勾选 gist 权限）
                 </div>
                 <div class="sync-buttons">
-                    <button class="sync-btn sync-btn-primary" onclick="connectGitHub()">连接</button>
+                    <button class="sync-btn sync-btn-primary" id="connectBtn" onclick="connectGitHub()">连接</button>
+                    <button class="sync-btn sync-btn-secondary" id="cancelTokenBtn" onclick="cancelTokenReplacement()" style="display:none;">取消</button>
                 </div>
             </div>
             <div id="syncActions" style="display:none;">
                 <div class="sync-buttons">
-                    <button class="sync-btn sync-btn-primary" id="uploadBtn" onclick="uploadToGist()">☁️ 上传</button>
-                    <button class="sync-btn sync-btn-secondary" id="downloadBtn" onclick="downloadFromGist()">⬇️ 下载</button>
+                    <button class="sync-btn sync-btn-primary" id="syncBtn" onclick="syncWithGist()">🔄 立即同步</button>
+                    <button class="sync-btn sync-btn-secondary" id="moreSyncBtn" onclick="toggleSyncMoreActions()">更多</button>
+                </div>
+                <div class="sync-more-actions" id="syncMoreActions">
+                    <div class="sync-buttons">
+                        <button class="sync-btn sync-btn-secondary" onclick="startTokenReplacement()">🔑 更换 Token</button>
+                        <button class="sync-btn sync-btn-secondary" id="uploadBtn" onclick="uploadToGist()">☁️ 本地覆盖云端</button>
+                        <button class="sync-btn sync-btn-danger" id="downloadBtn" onclick="downloadFromGist()">⬇️ 云端覆盖本地</button>
+                    </div>
                 </div>
                 <div class="last-sync" id="lastSync"></div>
             </div>
@@ -1573,15 +1638,54 @@
     </div>
 
     <script>
-        // 默认类型配置
+        // 默认类型与本地数据配置
         const DEFAULT_SITE_TYPE = 'API';
         const DEFAULT_TYPES = [DEFAULT_SITE_TYPE, '图片生成'];
-
-        // 类型配置管理
-        let siteTypes = JSON.parse(localStorage.getItem('siteTypes')) || [...DEFAULT_TYPES];
-
         const LEGACY_DEFAULT_TYPES = ['工具', '其他'];
-        const SITE_TYPES_VERSION = '2';
+        const SITE_TYPES_VERSION = '3';
+        const DATA_SCHEMA_VERSION = 3;
+        const DELETED_LINK_IDS_KEY = 'deletedLinkIds';
+        const DELETED_TYPE_IDS_KEY = 'deletedTypeIds';
+        const SYNC_BASE_KEY = 'syncBase';
+        const SYNC_BACKUP_KEY = 'syncBackup';
+        const REMOTE_REVISION_KEY = 'remoteRevision';
+        const SITE_TYPE_IDS_KEY = 'siteTypeIds';
+        const LINK_SYNC_FIELDS = ['url', 'name', 'enabled', 'typeId', 'order'];
+
+        let siteTypes = [...DEFAULT_TYPES];
+        let siteTypeIds = {};
+        let links = [];
+        let deletedLinkIds = new Set();
+        let deletedTypeIds = new Set();
+        let linkById = new Map();
+
+        function readJsonStorage(key, fallbackValue) {
+            const saved = localStorage.getItem(key);
+            if (!saved) return fallbackValue;
+            try {
+                return JSON.parse(saved);
+            } catch (error) {
+                console.warn('读取本地 JSON 数据失败', { key: key, error: error.message });
+                return fallbackValue;
+            }
+        }
+
+        function stableHash(value) {
+            let hash = 2166136261;
+            const text = String(value);
+            for (let index = 0; index < text.length; index += 1) {
+                hash ^= text.charCodeAt(index);
+                hash = Math.imul(hash, 16777619);
+            }
+            return (hash >>> 0).toString(36);
+        }
+
+        function createStableId(prefix) {
+            if (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') {
+                return `${prefix}-${globalThis.crypto.randomUUID()}`;
+            }
+            return `${prefix}-${Date.now()}-${stableHash(`${performance.now()}-${document.visibilityState}`)}`;
+        }
 
         function escapeHtml(value) {
             return String(value)
@@ -1664,7 +1768,7 @@
                     normalized.push(type);
                 }
             });
-            DEFAULT_TYPES.forEach(type => {
+            [DEFAULT_SITE_TYPE].forEach(type => {
                 if (!normalized.includes(type)) {
                     normalized.push(type);
                 }
@@ -1673,40 +1777,117 @@
         }
 
         function loadSiteTypes() {
-            const saved = localStorage.getItem('siteTypes');
+            const saved = readJsonStorage('siteTypes', DEFAULT_TYPES);
             const typesVersion = localStorage.getItem('siteTypesVersion');
-            const removeLegacyTypes = typesVersion !== SITE_TYPES_VERSION;
-            if (saved) {
-                try {
-                    siteTypes = normalizeSiteTypes(JSON.parse(saved), removeLegacyTypes);
-                } catch (e) {
-                    siteTypes = [...DEFAULT_TYPES];
-                }
-            } else {
-                siteTypes = [...DEFAULT_TYPES];
-            }
+            siteTypes = normalizeSiteTypes(saved, typesVersion !== SITE_TYPES_VERSION);
             localStorage.setItem('siteTypesVersion', SITE_TYPES_VERSION);
             saveSiteTypes();
             return siteTypes;
+        }
+
+        function loadSiteTypeIds() {
+            const saved = readJsonStorage(SITE_TYPE_IDS_KEY, {});
+            siteTypeIds = saved && typeof saved === 'object' && !Array.isArray(saved) ? saved : {};
+            const normalized = {};
+            siteTypes.forEach(typeName => {
+                const currentId = siteTypeIds[typeName];
+                normalized[typeName] = typeof currentId === 'string' && currentId
+                    ? currentId
+                    : `type-${stableHash(typeName)}`;
+            });
+            siteTypeIds = normalized;
+            saveSiteTypeIds();
+        }
+
+        function saveSiteTypeIds() {
+            localStorage.setItem(SITE_TYPE_IDS_KEY, JSON.stringify(siteTypeIds));
+        }
+
+        function getTypeId(typeName) {
+            if (!siteTypeIds[typeName]) {
+                siteTypeIds[typeName] = createStableId('type');
+                saveSiteTypeIds();
+            }
+            return siteTypeIds[typeName];
+        }
+
+        function getTypeNameById(typeId, fallbackName) {
+            const matchedName = Object.keys(siteTypeIds).find(typeName => siteTypeIds[typeName] === typeId);
+            return matchedName || fallbackName || DEFAULT_SITE_TYPE;
         }
 
         function saveSiteTypes() {
             localStorage.setItem('siteTypes', JSON.stringify(siteTypes));
         }
 
-        // 数据迁移：给旧数据补 order 和 type 字段
-        function migrateLinks(arr) {
-            const validTypes = normalizeSiteTypes(siteTypes, false);
-            return arr.map((link, idx) => ({
-                ...link,
-                order: typeof link.order === 'number' ? link.order : idx,
-                type: validTypes.includes(link.type) ? link.type : DEFAULT_SITE_TYPE
-            }));
+        function migrateLinkId(link, index) {
+            if (typeof link.id === 'string' && link.id.trim()) return link.id;
+            if (typeof link.id === 'number' && Number.isFinite(link.id)) return `legacy-${link.id}`;
+            const identity = `${link.url || ''}\u0000${link.name || ''}\u0000${link.addedAt || ''}\u0000${index}`;
+            return `legacy-generated-${stableHash(identity)}`;
         }
 
-        // 存储链接的数组
+        function normalizeLinks(value, validSiteTypes) {
+            const source = Array.isArray(value) ? value : [];
+            const validTypes = normalizeSiteTypes(validSiteTypes, false);
+            const usedIds = new Set();
+            return source.map((rawLink, index) => {
+                const link = rawLink && typeof rawLink === 'object' ? rawLink : {};
+                let id = migrateLinkId(link, index);
+                while (usedIds.has(id)) id = `${id}-${index}`;
+                usedIds.add(id);
+                const url = typeof link.url === 'string' ? link.url : '';
+                let domain = typeof link.domain === 'string' ? link.domain : '';
+                if (!domain && url) {
+                    try { domain = new URL(url).hostname; } catch (error) { domain = ''; }
+                }
+                return {
+                    id: id,
+                    url: url,
+                    name: typeof link.name === 'string' ? link.name : domain,
+                    domain: domain,
+                    favicon: 'api.svg',
+                    enabled: link.enabled !== false,
+                    type: validTypes.includes(link.type) ? link.type : DEFAULT_SITE_TYPE,
+                    order: typeof link.order === 'number' ? link.order : index,
+                    addedAt: typeof link.addedAt === 'string' ? link.addedAt : ''
+                };
+            });
+        }
+
+        // 旧链接升级为稳定字符串 ID；编辑业务字段时不再更换 ID
+        function migrateLinks(value) {
+            return normalizeLinks(value, siteTypes);
+        }
+
+        function rebuildLinkIndex() {
+            linkById = new Map(links.map(link => [link.id, link]));
+        }
+
+        function loadDeletedLinkIds() {
+            const saved = readJsonStorage(DELETED_LINK_IDS_KEY, []);
+            deletedLinkIds = new Set(Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : []);
+        }
+
+        function saveDeletedLinkIds() {
+            localStorage.setItem(DELETED_LINK_IDS_KEY, JSON.stringify(Array.from(deletedLinkIds)));
+        }
+
+        function loadDeletedTypeIds() {
+            const saved = readJsonStorage(DELETED_TYPE_IDS_KEY, []);
+            deletedTypeIds = new Set(Array.isArray(saved) ? saved.filter(id => typeof id === 'string') : []);
+        }
+
+        function saveDeletedTypeIds() {
+            localStorage.setItem(DELETED_TYPE_IDS_KEY, JSON.stringify(Array.from(deletedTypeIds)));
+        }
+
         loadSiteTypes();
-        let links = migrateLinks(JSON.parse(localStorage.getItem('myLinks')) || []);
+        loadSiteTypeIds();
+        links = migrateLinks(readJsonStorage('myLinks', []));
+        loadDeletedLinkIds();
+        loadDeletedTypeIds();
+        rebuildLinkIndex();
         saveLinks();
 
         // 搜索关键词
@@ -1848,12 +2029,15 @@
             }
 
             siteTypes[index] = newName;
+            siteTypeIds[newName] = siteTypeIds[oldName] || createStableId('type');
+            delete siteTypeIds[oldName];
             links.forEach(link => {
                 if (link.type === oldName) {
                     link.type = newName;
                 }
             });
             saveSiteTypes();
+            saveSiteTypeIds();
             saveLinks();
             renderTypeList();
             renderLinks();
@@ -1876,6 +2060,9 @@
             }
 
             siteTypes.push(typeName);
+            const typeId = getTypeId(typeName);
+            deletedTypeIds.delete(typeId);
+            saveDeletedTypeIds();
             saveSiteTypes();
             renderTypeList();
             input.value = '';
@@ -1923,8 +2110,13 @@
             });
             saveLinks();
 
+            const removedTypeId = siteTypeIds[typeName];
             siteTypes = siteTypes.filter(t => t !== typeName);
+            if (removedTypeId) deletedTypeIds.add(removedTypeId);
+            delete siteTypeIds[typeName];
             saveSiteTypes();
+            saveSiteTypeIds();
+            saveDeletedTypeIds();
             renderTypeList();
             renderLinks();
             showToast(`已删除类型"${typeName}"`, 'success');
@@ -1945,10 +2137,26 @@
             // 渲染类型管理列表
             renderTypeList();
 
-            // 搜索框输入事件（实时过滤）
-            document.getElementById('searchInput').addEventListener('input', (e) => {
-                searchKeyword = e.target.value.trim().toLowerCase();
-                renderLinks();
+            // 搜索框输入事件：中文输入完成后防抖过滤，避免连续全量渲染
+            const searchInput = document.getElementById('searchInput');
+            let searchTimer = null;
+            let isComposing = false;
+            const queueSearch = (value) => {
+                const keyword = String(value).trim().toLowerCase();
+                clearTimeout(searchTimer);
+                searchTimer = setTimeout(() => {
+                    if (keyword === searchKeyword) return;
+                    searchKeyword = keyword;
+                    renderLinks();
+                }, 120);
+            };
+            searchInput.addEventListener('compositionstart', () => { isComposing = true; });
+            searchInput.addEventListener('compositionend', event => {
+                isComposing = false;
+                queueSearch(event.target.value);
+            });
+            searchInput.addEventListener('input', event => {
+                if (!isComposing) queueSearch(event.target.value);
             });
 
             // 弹窗回车事件
@@ -1995,6 +2203,9 @@
             // 初始化壁纸选择器
             initWallpaperSelector();
             
+            // 初始化网站卡片事件委托，只绑定一次
+            setupLinkGridDelegation();
+
             // 初始化同步状态
             initSyncStatus();
         });
@@ -2166,7 +2377,7 @@
             const enabledOrders = links.filter(l => l.enabled !== false).map(l => l.order ?? 0);
             const maxOrder = enabledOrders.length > 0 ? Math.max(...enabledOrders) : -1;
             const link = {
-                id: Date.now(),
+                id: createStableId('link'),
                 url: url,
                 name: name,
                 domain: domain,
@@ -2178,6 +2389,9 @@
             };
 
             links.push(link);
+            deletedLinkIds.delete(link.id);
+            saveDeletedLinkIds();
+            linkById.set(link.id, link);
             saveLinks();
             renderLinks();
             closeModal();
@@ -2198,13 +2412,13 @@
             const safeName = escapeHtml(link.name);
             const safeUrl = escapeHtml(sanitizeUrl(link.url));
             const safeFavicon = escapeHtml(link.favicon);
+            const safeId = escapeHtml(link.id);
 
             if (link.enabled === false) {
                 return `
-                    <div class="link-card disabled" data-id="${link.id}" draggable="true"
-                         title="${safeName} (已禁用)"
-                         onclick="event.preventDefault(); showContextMenu(event, ${link.id});">
-                        <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
+                    <div class="link-card disabled" data-id="${safeId}" draggable="true"
+                         title="${safeName} (已禁用)">
+                        <button class="delete-btn" data-action="delete" title="删除">×</button>
                         <div class="link-icon-wrapper">
                             <img src="${safeFavicon}" alt="${safeName}" class="link-icon"
                                  onerror="${iconFallback}">
@@ -2218,11 +2432,10 @@
                 ? `<div class="position-badge ${getBadgeClass(position)}">${position}</div>`
                 : '';
             return `
-                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="link-card" data-id="${link.id}" draggable="true"
-                   title="${safeName}"
-                   oncontextmenu="showContextMenu(event, ${link.id})">
+                <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="link-card" data-id="${safeId}" draggable="true"
+                   title="${safeName}">
                     ${badgeHtml}
-                    <button class="delete-btn" onclick="deleteLink(event, ${link.id})" title="删除">×</button>
+                    <button class="delete-btn" data-action="delete" title="删除">×</button>
                     <div class="link-icon-wrapper">
                         <img src="${safeFavicon}" alt="${safeName}" class="link-icon"
                              onerror="${iconFallback}">
@@ -2359,8 +2572,7 @@
                 disabledGrid.innerHTML = '';
             }
 
-            // 附加拖拽处理器
-            attachDragHandlers();
+            // 类型分组数量较少，单独附加拖拽处理器；网站卡片使用网格事件委托
             attachTypeGroupDragHandlers();
         }
 
@@ -2436,90 +2648,121 @@
             draggedGroupType = null;
         }
 
-        // ===== 拖拽排序 =====
+        // ===== 网站卡片事件委托与拖拽排序 =====
         let draggedId = null;
+        let draggedLink = null;
 
-        function attachDragHandlers() {
-            document.querySelectorAll('.link-card[draggable="true"]').forEach(card => {
-                card.addEventListener('dragstart', handleDragStart);
-                card.addEventListener('dragover', handleDragOver);
-                card.addEventListener('dragleave', handleDragLeave);
-                card.addEventListener('drop', handleDrop);
-                card.addEventListener('dragend', handleDragEnd);
+        function getDelegatedCard(event, grid) {
+            const target = event.target instanceof Element ? event.target : null;
+            const card = target ? target.closest('.link-card[data-id]') : null;
+            return card && grid.contains(card) ? card : null;
+        }
+
+        function setupLinkGridDelegation() {
+            ['enabledGrid', 'disabledGrid'].forEach(gridId => {
+                const grid = document.getElementById(gridId);
+                grid.addEventListener('click', event => {
+                    const card = getDelegatedCard(event, grid);
+                    if (!card) return;
+                    if (event.target instanceof Element && event.target.closest('[data-action="delete"]')) {
+                        deleteLink(event, card.dataset.id);
+                        return;
+                    }
+                    if (card.classList.contains('disabled')) {
+                        event.preventDefault();
+                        showContextMenu(event, card.dataset.id);
+                    }
+                });
+                grid.addEventListener('contextmenu', event => {
+                    const card = getDelegatedCard(event, grid);
+                    if (!card || card.classList.contains('add-card')) return;
+                    showContextMenu(event, card.dataset.id);
+                });
+                grid.addEventListener('dragstart', event => {
+                    const card = getDelegatedCard(event, grid);
+                    if (card) handleDragStart(event, card);
+                });
+                grid.addEventListener('dragover', event => {
+                    const card = getDelegatedCard(event, grid);
+                    if (card) handleDragOver(event, card);
+                });
+                grid.addEventListener('dragleave', event => {
+                    const card = getDelegatedCard(event, grid);
+                    if (card) handleDragLeave(event, card);
+                });
+                grid.addEventListener('drop', event => {
+                    const card = getDelegatedCard(event, grid);
+                    if (card) handleDrop(event, card);
+                });
+                grid.addEventListener('dragend', event => {
+                    const card = getDelegatedCard(event, grid);
+                    handleDragEnd(event, card);
+                });
             });
         }
 
-        function handleDragStart(e) {
-            draggedId = parseInt(this.dataset.id);
-            this.classList.add('dragging');
-            e.stopPropagation();
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', String(draggedId));
+        function handleDragStart(event, card) {
+            draggedId = card.dataset.id;
+            draggedLink = linkById.get(draggedId) || null;
+            if (!draggedLink) return;
+            card.classList.add('dragging');
+            event.stopPropagation();
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedId);
         }
 
-        function handleDragOver(e) {
-            if (draggedId === null) return;
-            const targetId = parseInt(this.dataset.id);
+        function handleDragOver(event, card) {
+            if (!draggedLink) return;
+            const targetId = card.dataset.id;
             if (targetId === draggedId) return;
-
-            const dragged = links.find(l => l.id === draggedId);
-            const target = links.find(l => l.id === targetId);
-            if (!dragged || !target) return;
-            // 跨启用/禁用组或跨类型忽略
-            if ((dragged.enabled !== false) !== (target.enabled !== false)) return;
-            if (dragged.enabled !== false && (dragged.type || DEFAULT_SITE_TYPE) !== (target.type || DEFAULT_SITE_TYPE)) return;
-
-            e.preventDefault();
-            this.classList.add('drag-over');
+            const target = linkById.get(targetId);
+            if (!target) return;
+            if ((draggedLink.enabled !== false) !== (target.enabled !== false)) return;
+            if (draggedLink.enabled !== false && (draggedLink.type || DEFAULT_SITE_TYPE) !== (target.type || DEFAULT_SITE_TYPE)) return;
+            event.preventDefault();
+            event.stopPropagation();
+            card.classList.add('drag-over');
         }
 
-        function handleDragLeave(e) {
-            this.classList.remove('drag-over');
+        function handleDragLeave(event, card) {
+            if (event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
+            card.classList.remove('drag-over');
         }
 
-        function handleDrop(e) {
-            if (draggedId === null) return;
-            e.preventDefault();
-            e.stopPropagation();
-            this.classList.remove('drag-over');
-
-            const targetId = parseInt(this.dataset.id);
+        function handleDrop(event, card) {
+            if (!draggedLink) return;
+            event.preventDefault();
+            event.stopPropagation();
+            card.classList.remove('drag-over');
+            const targetId = card.dataset.id;
             if (targetId === draggedId) return;
+            const target = linkById.get(targetId);
+            if (!target) return;
+            if ((draggedLink.enabled !== false) !== (target.enabled !== false)) return;
+            if (draggedLink.enabled !== false && (draggedLink.type || DEFAULT_SITE_TYPE) !== (target.type || DEFAULT_SITE_TYPE)) return;
 
-            const dragged = links.find(l => l.id === draggedId);
-            const target = links.find(l => l.id === targetId);
-            if (!dragged || !target) return;
-            if ((dragged.enabled !== false) !== (target.enabled !== false)) return;
-            if (dragged.enabled !== false && (dragged.type || DEFAULT_SITE_TYPE) !== (target.type || DEFAULT_SITE_TYPE)) return;
-
-            // 同组内重排 + 紧凑化 order
-            const isEnabled = dragged.enabled !== false;
-            const group = links.filter(l => {
-                const sameEnabledState = (l.enabled !== false) === isEnabled;
+            const isEnabled = draggedLink.enabled !== false;
+            const group = links.filter(link => {
+                const sameEnabledState = (link.enabled !== false) === isEnabled;
                 if (!sameEnabledState) return false;
                 if (!isEnabled) return true;
-                return (l.type || DEFAULT_SITE_TYPE) === (dragged.type || DEFAULT_SITE_TYPE);
-            }).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-            const fromIdx = group.findIndex(l => l.id === draggedId);
-            const toIdx = group.findIndex(l => l.id === targetId);
-            if (fromIdx === -1 || toIdx === -1) return;
-
-            const [removed] = group.splice(fromIdx, 1);
-            group.splice(toIdx, 0, removed);
-
-            group.forEach((l, idx) => {
-                const item = links.find(link => link.id === l.id);
-                if (item) item.order = idx;
-            });
-
+                return (link.type || DEFAULT_SITE_TYPE) === (draggedLink.type || DEFAULT_SITE_TYPE);
+            }).sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+            const fromIndex = group.findIndex(link => link.id === draggedId);
+            const targetIndex = group.findIndex(link => link.id === targetId);
+            if (fromIndex === -1 || targetIndex === -1) return;
+            const [moved] = group.splice(fromIndex, 1);
+            group.splice(targetIndex, 0, moved);
+            group.forEach((link, index) => { link.order = index; });
             saveLinks();
             renderLinks();
         }
 
-        function handleDragEnd(e) {
-            this.classList.remove('dragging');
-            document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+        function handleDragEnd(event, card) {
+            if (card) card.classList.remove('dragging');
+            document.querySelectorAll('.drag-over').forEach(element => element.classList.remove('drag-over'));
             draggedId = null;
+            draggedLink = null;
         }
 
         // 删除链接（卡片上的 × 按钮）
@@ -2532,8 +2775,9 @@
             setTimeout(() => overlay.classList.add('active'), 10);
         }
 
-        // 保存链接到localStorage
+        // 保存链接到 localStorage，并同步更新 ID 索引
         function saveLinks() {
+            rebuildLinkIndex();
             localStorage.setItem('myLinks', JSON.stringify(links));
         }
 
@@ -2596,7 +2840,9 @@
         // 确认删除
         function confirmDelete() {
             if (editingId === null) return;
+            deletedLinkIds.add(editingId);
             links = links.filter(link => link.id !== editingId);
+            saveDeletedLinkIds();
             saveLinks();
             renderLinks();
             closeConfirmModal();
@@ -2699,252 +2945,756 @@
 
         // ===== GitHub Gist 同步功能 =====
         const GIST_FILENAME = 'infinity-start-data.json';
-        // Token 创建地址（已预选 gist 权限），失效或未填时引导用户跳转
         const TOKEN_CREATE_URL = 'https://github.com/settings/tokens/new?scopes=gist&description=Infinity%20Start%20Sync';
+        const GITHUB_API_VERSION = '2022-11-28';
+        const MAX_GIST_PAGES = 20;
+        let syncInProgress = false;
+        let replacingToken = false;
 
-        // 标记鉴权类错误（401/403），便于 catch 时区分处理
-        function authError(message) {
+        function githubHeaders(token, contentType) {
+            const headers = {
+                'Accept': 'application/vnd.github+json',
+                'Authorization': `Bearer ${token}`,
+                'X-GitHub-Api-Version': GITHUB_API_VERSION
+            };
+            if (contentType) headers['Content-Type'] = contentType;
+            return headers;
+        }
+
+        function githubError(message, kind, status, context) {
             const error = new Error(message);
-            error.isAuthError = true;
+            error.kind = kind;
+            error.status = status;
+            error.context = context;
             return error;
         }
 
-        // 在状态栏渲染带跳转链接的 Token 失效提示（链接为固定常量，无 XSS 风险）
-        function showTokenError(statusEl) {
-            statusEl.className = 'sync-status error';
-            statusEl.innerHTML = `Token 无效或已过期，请重新获取后连接：<a href="${TOKEN_CREATE_URL}" target="_blank" rel="noopener noreferrer">点击创建新 Token</a>（勾选 gist 权限）`;
+        async function ensureGitHubResponse(response, operation, requestContext) {
+            if (response.ok) return response;
+            const responseText = await response.text();
+            const context = {
+                operation: operation,
+                request: requestContext,
+                status: response.status,
+                response: responseText
+            };
+            if (response.status === 401) {
+                throw githubError('Token 无效或已过期', 'auth', response.status, context);
+            }
+            if (response.status === 403 && response.headers.get('x-ratelimit-remaining') === '0') {
+                const reset = response.headers.get('x-ratelimit-reset');
+                const resetText = reset && Number.isFinite(Number(reset))
+                    ? new Date(Number(reset) * 1000).toLocaleString()
+                    : '稍后';
+                throw githubError(`GitHub API 请求次数已用完，请在 ${resetText} 后重试`, 'rate-limit', response.status, context);
+            }
+            if (response.status === 403) {
+                throw githubError('Token 缺少 gist 权限，或被 GitHub 安全策略限制', 'permission', response.status, context);
+            }
+            if (response.status === 404) {
+                throw githubError('同步 Gist 不存在，或当前 Token 无权访问', 'not-found', response.status, context);
+            }
+            throw githubError(`${operation}失败（HTTP ${response.status}）`, 'http', response.status, context);
         }
 
-        // 页面加载时检查同步状态
+        function showTokenEditor(message, allowCancel, isError) {
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.className = isError === false ? 'sync-status' : 'sync-status error';
+            statusEl.innerHTML = `${escapeHtml(message)}：<a href="${TOKEN_CREATE_URL}" target="_blank" rel="noopener noreferrer">点击创建新 Token</a>（勾选 gist 权限）`;
+            document.getElementById('syncLoginForm').style.display = 'block';
+            document.getElementById('syncActions').style.display = 'none';
+            document.getElementById('syncMoreActions').style.display = 'none';
+            document.getElementById('cancelTokenBtn').style.display = allowCancel ? '' : 'none';
+            document.getElementById('connectBtn').textContent = allowCancel ? '验证并更换' : '连接';
+            const tokenInput = document.getElementById('githubToken');
+            tokenInput.value = '';
+            tokenInput.focus();
+        }
+
+        function showSyncError(error, operation) {
+            const statusEl = document.getElementById('syncStatus');
+            if (error.kind === 'auth' || error.kind === 'permission') {
+                showTokenEditor(error.message, false);
+            } else {
+                statusEl.textContent = `${operation}失败：${error.message}`;
+                statusEl.className = 'sync-status error';
+            }
+            console.error('GitHub Gist 操作失败', {
+                operation: operation,
+                kind: error.kind || 'unexpected',
+                status: error.status || 0,
+                context: error.context || null,
+                message: error.message
+            });
+            showToast(`${operation}失败：${error.message}`, 'error');
+        }
+
         function initSyncStatus() {
             const token = localStorage.getItem('githubToken');
             const gistId = localStorage.getItem('gistId');
             if (token && gistId) {
-                showSyncConnected();
+                showSyncConnected('已连接 - 点击“立即同步”合并数据');
+            } else {
+                showTokenEditor('未连接 - 数据仅保存在当前浏览器', false, false);
             }
         }
 
-        // 连接 GitHub
+        function startTokenReplacement() {
+            replacingToken = true;
+            document.getElementById('syncMoreActions').style.display = 'none';
+            showTokenEditor('请输入新的 Token', true);
+        }
+
+        function cancelTokenReplacement() {
+            replacingToken = false;
+            document.getElementById('githubToken').value = '';
+            showSyncConnected('已连接 - Token 未更换');
+        }
+
+        function toggleSyncMoreActions() {
+            const actions = document.getElementById('syncMoreActions');
+            actions.style.display = actions.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function showSyncConnected(message) {
+            replacingToken = false;
+            document.getElementById('syncLoginForm').style.display = 'none';
+            document.getElementById('syncActions').style.display = 'block';
+            document.getElementById('syncMoreActions').style.display = 'none';
+            document.getElementById('syncStatus').textContent = message;
+            document.getElementById('syncStatus').className = 'sync-status connected';
+            const lastSync = localStorage.getItem('lastSync');
+            document.getElementById('lastSync').textContent = lastSync
+                ? `上次同步: ${new Date(lastSync).toLocaleString()}`
+                : '';
+        }
+
         async function connectGitHub() {
-            const token = document.getElementById('githubToken').value.trim();
+            const tokenInput = document.getElementById('githubToken');
+            const token = tokenInput.value.trim();
             const statusEl = document.getElementById('syncStatus');
             if (!token) {
-                showTokenError(statusEl);
+                showTokenEditor('请粘贴 Token 后连接', Boolean(localStorage.getItem('githubToken')));
                 return;
             }
-
-            statusEl.textContent = '正在连接...';
+            const oldGistId = localStorage.getItem('gistId');
+            statusEl.textContent = '正在验证 Token...';
             statusEl.className = 'sync-status';
-
             try {
-                // 验证 Token 并查找或创建 Gist
-                const gistId = await findOrCreateGist(token);
+                const gistId = await findOrCreateGist(token, oldGistId);
                 localStorage.setItem('githubToken', token);
                 localStorage.setItem('gistId', gistId);
-                showSyncConnected();
-                statusEl.textContent = '已连接 - 可以上传/下载数据';
-                statusEl.className = 'sync-status connected';
+                if (oldGistId && oldGistId !== gistId) {
+                    localStorage.removeItem(SYNC_BASE_KEY);
+                    localStorage.removeItem(REMOTE_REVISION_KEY);
+                }
+                replacingToken = false;
+                tokenInput.value = '';
+                showSyncConnected('已连接 - Token 验证成功');
+                showToast('GitHub Token 已更新', 'success');
             } catch (error) {
-                // 鉴权失败展示跳转链接，其他错误显示普通文案
-                if (error.isAuthError) {
-                    showTokenError(statusEl);
-                } else {
-                    statusEl.textContent = '连接失败: ' + error.message;
+                if (replacingToken) {
+                    const statusEl = document.getElementById('syncStatus');
+                    statusEl.textContent = `Token 更换失败：${error.message}，原 Token 仍保留`;
                     statusEl.className = 'sync-status error';
+                    console.error('GitHub Token 更换失败', {
+                        kind: error.kind || 'unexpected',
+                        status: error.status || 0,
+                        context: error.context || null,
+                        message: error.message
+                    });
+                    showToast(`Token 更换失败：${error.message}`, 'error');
+                } else {
+                    showSyncError(error, '连接');
                 }
             }
         }
 
-        // 查找或创建 Gist
-        async function findOrCreateGist(token) {
-            // 先查找是否已有 Gist
-            const response = await fetch('https://api.github.com/gists', {
-                headers: { 'Authorization': 'token ' + token }
-            });
-            if (response.status === 401 || response.status === 403) {
-                throw authError('Token 无效或已过期');
+        async function findOrCreateGist(token, existingGistId) {
+            if (existingGistId) {
+                try {
+                    const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(existingGistId)}`, {
+                        headers: githubHeaders(token, '')
+                    });
+                    if (response.ok) {
+                        const gist = await response.json();
+                        if (gist.files && gist.files[GIST_FILENAME]) return gist.id;
+                    } else if (response.status !== 404) {
+                        await ensureGitHubResponse(response, '验证同步 Gist', { gistId: existingGistId });
+                    }
+                } catch (error) {
+                    if (error.kind !== 'not-found') throw error;
+                }
             }
-            if (!response.ok) throw new Error('请求失败');
 
-            const gists = await response.json();
-            const existingGist = gists.find(g => g.files && g.files[GIST_FILENAME]);
-
-            if (existingGist) {
-                return existingGist.id;
+            for (let page = 1; page <= MAX_GIST_PAGES; page += 1) {
+                const response = await fetch(`https://api.github.com/gists?per_page=100&page=${page}`, {
+                    headers: githubHeaders(token, '')
+                });
+                await ensureGitHubResponse(response, '查找同步 Gist', { page: page });
+                const gists = await response.json();
+                const existingGist = gists.find(gist => gist.files && gist.files[GIST_FILENAME]);
+                if (existingGist) return existingGist.id;
+                if (gists.length < 100) break;
             }
 
-            // 创建新 Gist
+            const emptyDocument = createSyncDocument({
+                links: [],
+                siteTypes: DEFAULT_TYPES.map((name, index) => ({ id: `type-${stableHash(name)}`, name: name, order: index })),
+                deletedLinkIds: [],
+                deletedTypeIds: [],
+                wallpaper: ''
+            }, '');
             const createResponse = await fetch('https://api.github.com/gists', {
                 method: 'POST',
-                headers: {
-                    'Authorization': 'token ' + token,
-                    'Content-Type': 'application/json'
-                },
+                headers: githubHeaders(token, 'application/json'),
                 body: JSON.stringify({
                     description: 'Infinity Start 数据同步',
                     public: false,
-                    files: {
-                        [GIST_FILENAME]: {
-                            content: JSON.stringify({ links: [], wallpaper: '' })
-                        }
-                    }
+                    files: { [GIST_FILENAME]: { content: JSON.stringify(emptyDocument, null, 2) } }
                 })
             });
-
-            if (!createResponse.ok) throw new Error('创建 Gist 失败');
+            await ensureGitHubResponse(createResponse, '创建同步 Gist', { filename: GIST_FILENAME });
             const newGist = await createResponse.json();
             return newGist.id;
         }
 
-        // 显示已连接状态
-        function showSyncConnected() {
-            document.getElementById('syncLoginForm').style.display = 'none';
-            document.getElementById('syncActions').style.display = 'block';
-            const lastSync = localStorage.getItem('lastSync');
-            if (lastSync) {
-                document.getElementById('lastSync').textContent = '上次同步: ' + new Date(lastSync).toLocaleString();
+        function normalizeSyncType(rawType, index) {
+            if (typeof rawType === 'string') {
+                return { id: `type-${stableHash(rawType)}`, name: rawType, order: index };
             }
+            const type = rawType && typeof rawType === 'object' ? rawType : {};
+            const name = typeof type.name === 'string' && type.name ? type.name : DEFAULT_SITE_TYPE;
+            return {
+                id: typeof type.id === 'string' && type.id ? type.id : `type-${stableHash(name)}`,
+                name: name,
+                order: typeof type.order === 'number' ? type.order : index
+            };
         }
 
-        // 上传到 Gist
-        async function uploadToGist() {
-            const token = localStorage.getItem('githubToken');
-            const gistId = localStorage.getItem('gistId');
-            if (!token || !gistId) return;
-
-            const statusEl = document.getElementById('syncStatus');
-            const uploadBtn = document.getElementById('uploadBtn');
-            const downloadBtn = document.getElementById('downloadBtn');
-            // 操作期间禁用按钮，避免重复请求
-            uploadBtn.disabled = true;
-            downloadBtn.disabled = true;
-            statusEl.textContent = '正在上传...';
-
-            try {
-                const data = {
-                    links: links,
-                    wallpaper: localStorage.getItem('currentWallpaper') || '',
-                    siteTypes: siteTypes
+        function normalizeSnapshot(rawValue) {
+            const value = rawValue && typeof rawValue === 'object' ? rawValue : {};
+            const rawData = value.data && typeof value.data === 'object' ? value.data : value;
+            const normalizedTypes = normalizeSiteTypes(
+                Array.isArray(rawData.siteTypes)
+                    ? rawData.siteTypes.map(type => typeof type === 'string' ? type : type && type.name)
+                    : DEFAULT_TYPES,
+                false
+            );
+            const typeRecords = normalizedTypes.map((name, index) => {
+                const rawType = Array.isArray(rawData.siteTypes)
+                    ? rawData.siteTypes.find(type => type === name || (type && type.name === name))
+                    : null;
+                return normalizeSyncType(rawType || name, index);
+            });
+            const typeIdByName = Object.fromEntries(typeRecords.map(type => [type.name, type.id]));
+            const rawLinks = Array.isArray(rawData.links) ? rawData.links : [];
+            const normalizedLinkRecords = normalizeLinks(rawLinks, normalizedTypes);
+            const normalizedLinks = normalizedLinkRecords.map((link, index) => {
+                const rawLink = rawLinks[index] && typeof rawLinks[index] === 'object' ? rawLinks[index] : {};
+                return {
+                    id: link.id,
+                    url: link.url,
+                    name: link.name,
+                    enabled: link.enabled,
+                    typeId: typeof rawLink.typeId === 'string'
+                        ? rawLink.typeId
+                        : typeIdByName[link.type] || typeIdByName[DEFAULT_SITE_TYPE],
+                    order: link.order
                 };
+            });
+            return {
+                links: normalizedLinks,
+                siteTypes: typeRecords,
+                deletedLinkIds: Array.isArray(rawData.deletedLinkIds)
+                    ? rawData.deletedLinkIds.filter(id => typeof id === 'string')
+                    : [],
+                deletedTypeIds: Array.isArray(rawData.deletedTypeIds)
+                    ? rawData.deletedTypeIds.filter(id => typeof id === 'string')
+                    : [],
+                wallpaper: typeof rawData.wallpaper === 'string' ? rawData.wallpaper : ''
+            };
+        }
 
-                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Authorization': 'token ' + token,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        files: {
-                            [GIST_FILENAME]: {
-                                content: JSON.stringify(data, null, 2)
-                            }
-                        }
-                    })
+        function createLocalSnapshot() {
+            return normalizeSnapshot({
+                links: links.map(link => ({
+                    id: link.id,
+                    url: link.url,
+                    name: link.name,
+                    enabled: link.enabled !== false,
+                    typeId: getTypeId(link.type || DEFAULT_SITE_TYPE),
+                    order: link.order ?? 0
+                })),
+                siteTypes: siteTypes.map((name, index) => ({ id: getTypeId(name), name: name, order: index })),
+                deletedLinkIds: Array.from(deletedLinkIds),
+                deletedTypeIds: Array.from(deletedTypeIds),
+                wallpaper: currentWallpaper || ''
+            });
+        }
+
+        function createSyncDocument(snapshot, parentRevision) {
+            return {
+                schemaVersion: DATA_SCHEMA_VERSION,
+                revision: createStableId('revision'),
+                parentRevision: parentRevision || '',
+                data: normalizeSnapshot(snapshot)
+            };
+        }
+
+        function readSyncBase() {
+            const saved = readJsonStorage(SYNC_BASE_KEY, null);
+            return saved ? normalizeSnapshot(saved) : null;
+        }
+
+        function saveSyncBase(snapshot, revision) {
+            localStorage.setItem(SYNC_BASE_KEY, JSON.stringify(normalizeSnapshot(snapshot)));
+            localStorage.setItem(REMOTE_REVISION_KEY, revision || '');
+        }
+
+        function comparableValue(value) {
+            if (Array.isArray(value)) return JSON.stringify(value);
+            if (value && typeof value === 'object') {
+                const sorted = {};
+                Object.keys(value).sort().forEach(key => { sorted[key] = value[key]; });
+                return JSON.stringify(sorted);
+            }
+            return JSON.stringify(value);
+        }
+
+        function valuesEqual(left, right) {
+            return comparableValue(left) === comparableValue(right);
+        }
+
+        function compareSnapshots(leftValue, rightValue) {
+            const left = normalizeSnapshot(leftValue);
+            const right = normalizeSnapshot(rightValue);
+            const sortById = (first, second) => first.id.localeCompare(second.id);
+            const comparable = snapshot => ({
+                links: snapshot.links.slice().sort(sortById),
+                siteTypes: snapshot.siteTypes.slice().sort(sortById),
+                deletedLinkIds: snapshot.deletedLinkIds.slice().sort(),
+                deletedTypeIds: snapshot.deletedTypeIds.slice().sort(),
+                wallpaper: snapshot.wallpaper
+            });
+            return valuesEqual(comparable(left), comparable(right));
+        }
+
+        function mapById(items) {
+            return new Map(items.map(item => [item.id, item]));
+        }
+
+        function mergeField(baseValue, localValue, remoteValue, conflictContext, conflicts) {
+            if (valuesEqual(localValue, remoteValue)) return localValue;
+            if (valuesEqual(localValue, baseValue)) return remoteValue;
+            if (valuesEqual(remoteValue, baseValue)) return localValue;
+            const conflictId = `conflict-${conflicts.length}`;
+            conflicts.push({
+                id: conflictId,
+                ...conflictContext,
+                localValue: localValue,
+                remoteValue: remoteValue
+            });
+            return { conflictId: conflictId };
+        }
+
+        function mergeEntity(baseEntity, localEntity, remoteEntity, fields, entityType, conflicts) {
+            if (!baseEntity) {
+                if (!localEntity) return remoteEntity;
+                if (!remoteEntity) return localEntity;
+                if (valuesEqual(localEntity, remoteEntity)) return localEntity;
+                const conflictId = `conflict-${conflicts.length}`;
+                conflicts.push({
+                    id: conflictId,
+                    entityType: entityType,
+                    entityId: localEntity.id,
+                    field: '__entity__',
+                    localValue: localEntity,
+                    remoteValue: remoteEntity
                 });
-
-                if (response.status === 401 || response.status === 403) {
-                    throw authError('Token 无效或已过期');
-                }
-                if (!response.ok) throw new Error('上传失败');
-
-                const now = new Date().toISOString();
-                localStorage.setItem('lastSync', now);
-                document.getElementById('lastSync').textContent = '上次同步: ' + new Date(now).toLocaleString();
-                statusEl.textContent = '已连接 - 上传成功';
-                statusEl.className = 'sync-status connected';
-                showToast('已上传到云端', 'success');
-            } catch (error) {
-                if (error.isAuthError) {
-                    showTokenError(statusEl);
+                return { id: localEntity.id, __entityConflict: conflictId };
+            }
+            if (!localEntity && !remoteEntity) return null;
+            if (!localEntity) {
+                if (valuesEqual(remoteEntity, baseEntity)) return null;
+                const conflictId = `conflict-${conflicts.length}`;
+                conflicts.push({ id: conflictId, entityType: entityType, entityId: remoteEntity.id, field: '__entity__', localValue: null, remoteValue: remoteEntity });
+                return { id: remoteEntity.id, __entityConflict: conflictId };
+            }
+            if (!remoteEntity) {
+                if (valuesEqual(localEntity, baseEntity)) return null;
+                const conflictId = `conflict-${conflicts.length}`;
+                conflicts.push({ id: conflictId, entityType: entityType, entityId: localEntity.id, field: '__entity__', localValue: localEntity, remoteValue: null });
+                return { id: localEntity.id, __entityConflict: conflictId };
+            }
+            const merged = { id: localEntity.id };
+            fields.forEach(field => {
+                const result = mergeField(
+                    baseEntity ? baseEntity[field] : undefined,
+                    localEntity[field],
+                    remoteEntity[field],
+                    { entityType: entityType, entityId: localEntity.id, field: field },
+                    conflicts
+                );
+                if (result && typeof result === 'object' && result.conflictId) {
+                    merged[`__conflict_${field}`] = result.conflictId;
                 } else {
-                    statusEl.textContent = '上传失败: ' + error.message;
-                    statusEl.className = 'sync-status error';
+                    merged[field] = result;
                 }
-                showToast('上传失败：' + error.message, 'error');
-            } finally {
-                uploadBtn.disabled = false;
-                downloadBtn.disabled = false;
+            });
+            return merged;
+        }
+
+        function mergeEntityCollection(baseItems, localItems, remoteItems, fields, entityType, conflicts) {
+            const baseMap = mapById(baseItems);
+            const localMap = mapById(localItems);
+            const remoteMap = mapById(remoteItems);
+            const ids = new Set([...baseMap.keys(), ...localMap.keys(), ...remoteMap.keys()]);
+            return Array.from(ids).map(id => mergeEntity(
+                baseMap.get(id) || null,
+                localMap.get(id) || null,
+                remoteMap.get(id) || null,
+                fields,
+                entityType,
+                conflicts
+            )).filter(Boolean);
+        }
+
+        function mergeSnapshots(baseValue, localValue, remoteValue) {
+            const base = normalizeSnapshot(baseValue || {});
+            const local = normalizeSnapshot(localValue);
+            const remote = normalizeSnapshot(remoteValue);
+            const conflicts = [];
+            const mergedTypes = mergeEntityCollection(base.siteTypes, local.siteTypes, remote.siteTypes, ['name', 'order'], 'type', conflicts);
+            const mergedLinks = mergeEntityCollection(base.links, local.links, remote.links, LINK_SYNC_FIELDS, 'link', conflicts);
+            const wallpaper = mergeField(base.wallpaper, local.wallpaper, remote.wallpaper, {
+                entityType: 'wallpaper', entityId: 'wallpaper', field: 'wallpaper'
+            }, conflicts);
+            return {
+                snapshot: {
+                    links: mergedLinks,
+                    siteTypes: mergedTypes,
+                    deletedLinkIds: Array.from(new Set([...base.deletedLinkIds, ...local.deletedLinkIds, ...remote.deletedLinkIds])),
+                    deletedTypeIds: Array.from(new Set([...base.deletedTypeIds, ...local.deletedTypeIds, ...remote.deletedTypeIds])),
+                    wallpaper: wallpaper && typeof wallpaper === 'object' && wallpaper.conflictId ? '' : wallpaper
+                },
+                conflicts: conflicts
+            };
+        }
+
+        function describeConflictValue(conflict, value) {
+            if (value === null || value === undefined) return '已删除';
+            if (conflict.field === '__entity__') return value.name || value.url || '保留此项';
+            if (conflict.field === 'enabled') return value ? '启用' : '禁用';
+            if (conflict.field === 'typeId') return getTypeNameById(value, value);
+            return String(value);
+        }
+
+        function showConflictResolver(mergeResult) {
+            const overlay = document.getElementById('syncConflictModal');
+            const list = document.getElementById('syncConflictList');
+            list.innerHTML = mergeResult.conflicts.map(conflict => {
+                const localText = escapeHtml(describeConflictValue(conflict, conflict.localValue));
+                const remoteText = escapeHtml(describeConflictValue(conflict, conflict.remoteValue));
+                const title = conflict.entityType === 'link'
+                    ? `网站 · ${escapeHtml(conflict.field === '__entity__' ? '删除与修改' : conflict.field)}`
+                    : conflict.entityType === 'type'
+                        ? `类型 · ${escapeHtml(conflict.field === '__entity__' ? '删除与修改' : conflict.field)}`
+                        : '壁纸';
+                const duplicateOption = conflict.entityType === 'link' && conflict.field === '__entity__' && conflict.localValue && conflict.remoteValue
+                    ? `<label><input type="radio" name="${conflict.id}" value="both"> 保留两份</label>`
+                    : '';
+                return `
+                    <div class="sync-conflict-item">
+                        <div class="sync-conflict-title">${title}</div>
+                        <div class="sync-conflict-field">本地：${localText}<br>云端：${remoteText}</div>
+                        <div class="sync-conflict-options">
+                            <label><input type="radio" name="${conflict.id}" value="local" checked> 使用本地</label>
+                            <label><input type="radio" name="${conflict.id}" value="remote"> 使用云端</label>
+                            ${duplicateOption}
+                        </div>
+                    </div>`;
+            }).join('');
+            overlay.style.display = 'flex';
+            requestAnimationFrame(() => overlay.classList.add('active'));
+            return new Promise(resolve => {
+                let resolved = false;
+                const close = result => {
+                    if (resolved) return;
+                    resolved = true;
+                    overlay.classList.remove('active');
+                    setTimeout(() => { overlay.style.display = 'none'; }, 300);
+                    document.getElementById('syncConflictApply').onclick = null;
+                    document.getElementById('syncConflictCancel').onclick = null;
+                    document.removeEventListener('keydown', handleKeydown);
+                    resolve(result);
+                };
+                const handleKeydown = event => {
+                    if (event.key === 'Escape') close(null);
+                };
+                document.getElementById('syncConflictCancel').onclick = () => close(null);
+                document.getElementById('syncConflictApply').onclick = () => {
+                    const choices = {};
+                    mergeResult.conflicts.forEach(conflict => {
+                        const selected = list.querySelector(`input[name="${conflict.id}"]:checked`);
+                        choices[conflict.id] = selected ? selected.value : 'local';
+                    });
+                    close(choices);
+                };
+                document.addEventListener('keydown', handleKeydown);
+            });
+        }
+
+        function cloneJsonValue(value) {
+            return JSON.parse(JSON.stringify(value));
+        }
+
+        function removeChosenEntityTombstone(snapshot, conflict, selectedValue) {
+            if (!selectedValue) return;
+            if (conflict.entityType === 'link') {
+                snapshot.deletedLinkIds = snapshot.deletedLinkIds.filter(id => id !== selectedValue.id);
+            }
+            if (conflict.entityType === 'type') {
+                snapshot.deletedTypeIds = snapshot.deletedTypeIds.filter(id => id !== selectedValue.id);
             }
         }
 
-        // 从 Gist 下载
-        async function downloadFromGist() {
+        function resolveMergeConflicts(mergeResult, choices) {
+            const snapshot = cloneJsonValue(mergeResult.snapshot);
+            const conflictMap = new Map(mergeResult.conflicts.map(conflict => [conflict.id, conflict]));
+            const resolveCollection = items => items.flatMap(item => {
+                if (item.__entityConflict) {
+                    const conflict = conflictMap.get(item.__entityConflict);
+                    const choice = choices[item.__entityConflict];
+                    if (choice === 'both' && conflict.localValue && conflict.remoteValue) {
+                        removeChosenEntityTombstone(snapshot, conflict, conflict.localValue);
+                        removeChosenEntityTombstone(snapshot, conflict, conflict.remoteValue);
+                        return [
+                            conflict.localValue,
+                            { ...conflict.remoteValue, id: createStableId('link'), name: `${conflict.remoteValue.name}（云端）` }
+                        ];
+                    }
+                    const selected = choice === 'remote' ? conflict.remoteValue : conflict.localValue;
+                    removeChosenEntityTombstone(snapshot, conflict, selected);
+                    return selected ? [selected] : [];
+                }
+                Object.keys(item).filter(key => key.startsWith('__conflict_')).forEach(key => {
+                    const conflictId = item[key];
+                    const conflict = conflictMap.get(conflictId);
+                    const field = key.replace('__conflict_', '');
+                    item[field] = choices[conflictId] === 'remote' ? conflict.remoteValue : conflict.localValue;
+                    delete item[key];
+                });
+                return [item];
+            });
+            snapshot.links = resolveCollection(snapshot.links);
+            snapshot.siteTypes = resolveCollection(snapshot.siteTypes);
+            const wallpaperConflict = mergeResult.conflicts.find(conflict => conflict.entityType === 'wallpaper');
+            if (wallpaperConflict) {
+                snapshot.wallpaper = choices[wallpaperConflict.id] === 'remote'
+                    ? wallpaperConflict.remoteValue
+                    : wallpaperConflict.localValue;
+            }
+            return normalizeSnapshot(snapshot);
+        }
+
+        function applySnapshot(snapshotValue) {
+            localStorage.setItem(SYNC_BACKUP_KEY, JSON.stringify(createLocalSnapshot()));
+            const snapshot = normalizeSnapshot(snapshotValue);
+            const visibleTypeRecords = snapshot.siteTypes
+                .filter(type => !snapshot.deletedTypeIds.includes(type.id))
+                .sort((left, right) => left.order - right.order);
+            siteTypes = normalizeSiteTypes(visibleTypeRecords.map(type => type.name), false);
+            siteTypeIds = Object.fromEntries(visibleTypeRecords.map(type => [type.name, type.id]));
+            DEFAULT_TYPES.forEach(typeName => { getTypeId(typeName); });
+            const typeNameById = Object.fromEntries(visibleTypeRecords.map(type => [type.id, type.name]));
+            links = snapshot.links
+                .filter(link => !snapshot.deletedLinkIds.includes(link.id))
+                .map(link => {
+                    const url = link.url;
+                    let domain = '';
+                    try { domain = new URL(url).hostname; } catch (error) { domain = ''; }
+                    return {
+                        id: link.id,
+                        url: url,
+                        name: link.name,
+                        domain: domain,
+                        favicon: 'api.svg',
+                        enabled: link.enabled !== false,
+                        type: typeNameById[link.typeId] || DEFAULT_SITE_TYPE,
+                        order: link.order,
+                        addedAt: ''
+                    };
+                });
+            deletedLinkIds = new Set(snapshot.deletedLinkIds);
+            deletedTypeIds = new Set(snapshot.deletedTypeIds);
+            currentWallpaper = snapshot.wallpaper || currentWallpaper;
+            saveSiteTypes();
+            saveSiteTypeIds();
+            saveDeletedLinkIds();
+            saveDeletedTypeIds();
+            saveLinks();
+            localStorage.setItem('currentWallpaper', currentWallpaper);
+            applyBackground(currentWallpaper);
+            renderWallpapers();
+            renderTypeList();
+            renderLinks();
+        }
+
+        async function fetchRemoteDocument(token, gistId) {
+            const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
+                headers: githubHeaders(token, '')
+            });
+            await ensureGitHubResponse(response, '读取云端数据', { gistId: gistId });
+            const gist = await response.json();
+            const file = gist.files && gist.files[GIST_FILENAME];
+            if (!file) throw githubError('同步数据文件不存在', 'data', response.status, { gistId: gistId });
+            let content = file.content;
+            if (file.truncated && file.raw_url) {
+                const rawResponse = await fetch(file.raw_url);
+                await ensureGitHubResponse(rawResponse, '读取完整云端数据', { rawUrl: file.raw_url });
+                content = await rawResponse.text();
+            }
+            let parsed;
+            try {
+                parsed = JSON.parse(content);
+            } catch (error) {
+                throw githubError('云端同步文件不是有效 JSON', 'data', response.status, { gistId: gistId, error: error.message });
+            }
+            return {
+                snapshot: normalizeSnapshot(parsed),
+                revision: typeof parsed.revision === 'string' ? parsed.revision : gist.history?.[0]?.version || ''
+            };
+        }
+
+        async function writeRemoteDocument(token, gistId, snapshot, expectedRevision) {
+            const current = await fetchRemoteDocument(token, gistId);
+            if (expectedRevision && current.revision !== expectedRevision) {
+                throw githubError('云端数据在同步期间发生变化，请重新同步', 'concurrent', 409, {
+                    expectedRevision: expectedRevision,
+                    actualRevision: current.revision
+                });
+            }
+            const documentValue = createSyncDocument(snapshot, current.revision);
+            const response = await fetch(`https://api.github.com/gists/${encodeURIComponent(gistId)}`, {
+                method: 'PATCH',
+                headers: githubHeaders(token, 'application/json'),
+                body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(documentValue, null, 2) } } })
+            });
+            await ensureGitHubResponse(response, '写入云端数据', { gistId: gistId, parentRevision: current.revision });
+            const verified = await fetchRemoteDocument(token, gistId);
+            if (verified.revision !== documentValue.revision) {
+                throw githubError('云端数据被另一台设备同时更新，请重新同步', 'concurrent', 409, {
+                    expectedRevision: documentValue.revision,
+                    actualRevision: verified.revision
+                });
+            }
+            return documentValue.revision;
+        }
+
+        function setSyncButtonsDisabled(disabled) {
+            ['syncBtn', 'uploadBtn', 'downloadBtn', 'moreSyncBtn'].forEach(id => {
+                const button = document.getElementById(id);
+                if (button) button.disabled = disabled;
+            });
+        }
+
+        function finishSuccessfulSync(snapshot, revision, message) {
+            applySnapshot(snapshot);
+            saveSyncBase(createLocalSnapshot(), revision);
+            const now = new Date().toISOString();
+            localStorage.setItem('lastSync', now);
+            showSyncConnected(message);
+            showToast(message, 'success');
+        }
+
+        async function syncWithGist() {
+            if (syncInProgress) return;
+            const token = localStorage.getItem('githubToken');
+            const gistId = localStorage.getItem('gistId');
+            if (!token || !gistId) {
+                showTokenEditor('请先连接 GitHub', false);
+                return;
+            }
+            syncInProgress = true;
+            setSyncButtonsDisabled(true);
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.textContent = '正在比较本地与云端数据...';
+            statusEl.className = 'sync-status';
+            try {
+                const localSnapshot = createLocalSnapshot();
+                const remote = await fetchRemoteDocument(token, gistId);
+                const base = readSyncBase();
+                const mergeResult = mergeSnapshots(base, localSnapshot, remote.snapshot);
+                let mergedSnapshot = mergeResult.snapshot;
+                if (mergeResult.conflicts.length > 0) {
+                    const choices = await showConflictResolver(mergeResult);
+                    if (!choices) {
+                        statusEl.textContent = '已取消同步，本地和云端均未修改';
+                        return;
+                    }
+                    mergedSnapshot = resolveMergeConflicts(mergeResult, choices);
+                }
+                if (compareSnapshots(mergedSnapshot, remote.snapshot)) {
+                    finishSuccessfulSync(mergedSnapshot, remote.revision, '同步完成 - 已采用云端更新');
+                    return;
+                }
+                const revision = await writeRemoteDocument(token, gistId, mergedSnapshot, remote.revision);
+                finishSuccessfulSync(mergedSnapshot, revision, mergeResult.conflicts.length > 0 ? '冲突已处理并同步' : '同步完成');
+            } catch (error) {
+                showSyncError(error, '同步');
+            } finally {
+                syncInProgress = false;
+                setSyncButtonsDisabled(false);
+            }
+        }
+
+        async function uploadToGist() {
+            const confirmed = await showConfirm({
+                icon: '☁️',
+                title: '用本地数据覆盖云端',
+                desc: '此操作不会自动合并云端独有修改，确定继续？',
+                okText: '覆盖',
+                danger: true
+            });
+            if (!confirmed) return;
             const token = localStorage.getItem('githubToken');
             const gistId = localStorage.getItem('gistId');
             if (!token || !gistId) return;
-
-            const statusEl = document.getElementById('syncStatus');
-            const uploadBtn = document.getElementById('uploadBtn');
-            const downloadBtn = document.getElementById('downloadBtn');
-
-            // 本地有任何数据（链接或自定义类型）就提示，避免静默覆盖
-            const hasLocalData = links.length > 0 || siteTypes.some(t => !DEFAULT_TYPES.includes(t));
-            if (hasLocalData) {
-                const confirmed = await showConfirm({
-                    icon: '⬇️',
-                    title: '覆盖本地数据',
-                    desc: '下载将用云端数据覆盖当前本地的网站和类型，<br>确定继续？',
-                    okText: '覆盖',
-                    danger: true
-                });
-                if (!confirmed) return;
-            }
-
-            // 操作期间禁用按钮，避免重复请求
-            uploadBtn.disabled = true;
-            downloadBtn.disabled = true;
-            statusEl.textContent = '正在下载...';
-
+            setSyncButtonsDisabled(true);
             try {
-                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-                    headers: { 'Authorization': 'token ' + token }
-                });
-
-                if (response.status === 401 || response.status === 403) {
-                    throw authError('Token 无效或已过期');
-                }
-                if (!response.ok) throw new Error('下载失败');
-
-                const gist = await response.json();
-                const file = gist.files[GIST_FILENAME];
-                if (!file) throw new Error('数据文件不存在');
-
-                const data = JSON.parse(file.content);
-
-                // 恢复数据
-                if (data.siteTypes && Array.isArray(data.siteTypes) && data.siteTypes.length > 0) {
-                    // 覆盖类型：完全以云端数据为准，不保留本地独有类型
-                    siteTypes = normalizeSiteTypes(data.siteTypes, false);
-                    saveSiteTypes();
-                    renderTypeList();
-                }
-                if (data.links) {
-                    links = migrateLinks(data.links);
-                    saveLinks();
-                    renderLinks();
-                }
-                if (data.wallpaper) {
-                    localStorage.setItem('currentWallpaper', data.wallpaper);
-                    applyBackground(data.wallpaper);
-                }
-
-                const now = new Date().toISOString();
-                localStorage.setItem('lastSync', now);
-                document.getElementById('lastSync').textContent = '上次同步: ' + new Date(now).toLocaleString();
-                statusEl.textContent = '已连接 - 下载成功';
-                statusEl.className = 'sync-status connected';
-                showToast('已用云端数据覆盖本地', 'success');
+                const remote = await fetchRemoteDocument(token, gistId);
+                const snapshot = createLocalSnapshot();
+                const revision = await writeRemoteDocument(token, gistId, snapshot, remote.revision);
+                finishSuccessfulSync(snapshot, revision, '已用本地数据覆盖云端');
             } catch (error) {
-                if (error.isAuthError) {
-                    showTokenError(statusEl);
-                } else {
-                    statusEl.textContent = '下载失败: ' + error.message;
-                    statusEl.className = 'sync-status error';
-                }
-                showToast('下载失败：' + error.message, 'error');
+                showSyncError(error, '上传');
             } finally {
-                uploadBtn.disabled = false;
-                downloadBtn.disabled = false;
+                setSyncButtonsDisabled(false);
+            }
+        }
+
+        async function downloadFromGist() {
+            const confirmed = await showConfirm({
+                icon: '⬇️',
+                title: '用云端数据覆盖本地',
+                desc: '当前本地数据会先备份，然后由云端数据覆盖，确定继续？',
+                okText: '覆盖',
+                danger: true
+            });
+            if (!confirmed) return;
+            const token = localStorage.getItem('githubToken');
+            const gistId = localStorage.getItem('gistId');
+            if (!token || !gistId) return;
+            setSyncButtonsDisabled(true);
+            try {
+                localStorage.setItem(SYNC_BACKUP_KEY, JSON.stringify(createLocalSnapshot()));
+                const remote = await fetchRemoteDocument(token, gistId);
+                finishSuccessfulSync(remote.snapshot, remote.revision, '已用云端数据覆盖本地');
+            } catch (error) {
+                showSyncError(error, '下载');
+            } finally {
+                setSyncButtonsDisabled(false);
             }
         }
 

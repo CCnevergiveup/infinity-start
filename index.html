@@ -16,9 +16,21 @@
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             min-height: 100vh;
-            background: url('壁纸/普通/wallhaven-1j7z19.jpg') center/cover no-repeat fixed;
+            background: #1a1a1f;
             position: relative;
             overflow-x: hidden;
+        }
+
+        /* 壁纸独立固定层：一次光栅化后常驻自身合成层，前景重绘不再触发背景重绘 */
+        #bgLayer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('壁纸/普通/wallhaven-1j7z19.jpg') center/cover no-repeat;
+            transform: translateZ(0);
+            z-index: -2;
         }
 
         body::before {
@@ -1425,6 +1437,8 @@
     </style>
 </head>
 <body>
+    <!-- 独立背景层：常驻单独合成层缓存壁纸，避免前景重绘时重新光栅化全屏背景 -->
+    <div id="bgLayer"></div>
     <div class="container">
         <!-- 搜索区域 -->
         <div class="search-section">
@@ -3731,22 +3745,23 @@
 
         // 应用背景
         function applyBackground(bg) {
-            const body = document.body;
-            
+            // 壁纸绘制在独立固定层 #bgLayer 上，layer 本身已 fixed，无需再写 fixed 关键字
+            const layer = document.getElementById('bgLayer');
+            if (!layer) return;
+
             if (bg.startsWith('gradient')) {
-                body.style.backgroundImage = 'none';
                 switch(bg) {
                     case 'gradient1':
-                        body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                        layer.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
                         break;
                     case 'gradient2':
-                        body.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                        layer.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
                         break;
                 }
             } else {
                 // 过滤能逃逸出 url('...') 的字符（引号、括号、反斜杠、空白），阻断 CSS 注入
                 const safeBg = String(bg).replace(/['"()\\\s]/g, '');
-                body.style.background = `url('${safeBg}') center/cover no-repeat fixed`;
+                layer.style.background = `url('${safeBg}') center/cover no-repeat`;
             }
         }
     </script>

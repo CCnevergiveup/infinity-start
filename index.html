@@ -152,8 +152,6 @@
             border-radius: 18px;
             background: rgba(255, 255, 255, 0.06);
             transition: background 0.2s, border-color 0.2s, transform 0.2s;
-            content-visibility: auto;
-            contain-intrinsic-size: auto 180px;
         }
 
         .type-section.drag-over {
@@ -3284,6 +3282,31 @@
             return new Map(items.map(item => [item.id, item]));
         }
 
+        // 规范化 URL 作为网站身份：去首尾空白、去尾部斜杠、统一小写
+        function canonicalUrl(url) {
+            return String(url || '').trim().replace(/\/+$/, '').toLowerCase();
+        }
+
+        // 按 URL 统一网站 ID：同一 URL 在三方（base/local/remote）派生出相同 ID，
+        // 从而让历史上各设备用 Date.now() 生成的不同 legacy ID 对齐为同一实体；
+        // 同一快照内 URL 重复的条目只保留首条，直接消除重复。
+        function alignLinksByUrl(links) {
+            const seen = new Map();
+            const result = [];
+            links.forEach(link => {
+                const key = canonicalUrl(link.url);
+                if (!key) {
+                    result.push(link);
+                    return;
+                }
+                if (seen.has(key)) return;
+                const unifiedId = `link-${stableHash(key)}`;
+                seen.set(key, unifiedId);
+                result.push({ ...link, id: unifiedId });
+            });
+            return result;
+        }
+
         function mergeField(baseValue, localValue, remoteValue, conflictContext, conflicts) {
             if (valuesEqual(localValue, remoteValue)) return localValue;
             if (valuesEqual(localValue, baseValue)) return remoteValue;
@@ -3366,7 +3389,13 @@
             const remote = normalizeSnapshot(remoteValue);
             const conflicts = [];
             const mergedTypes = mergeEntityCollection(base.siteTypes, local.siteTypes, remote.siteTypes, ['name', 'order'], 'type', conflicts);
-            const mergedLinks = mergeEntityCollection(base.links, local.links, remote.links, LINK_SYNC_FIELDS, 'link', conflicts);
+            // 合并前按 URL 对齐网站身份，消除跨设备 legacy ID 不一致导致的重复
+            const mergedLinks = mergeEntityCollection(
+                alignLinksByUrl(base.links),
+                alignLinksByUrl(local.links),
+                alignLinksByUrl(remote.links),
+                LINK_SYNC_FIELDS, 'link', conflicts
+            );
             const wallpaper = mergeField(base.wallpaper, local.wallpaper, remote.wallpaper, {
                 entityType: 'wallpaper', entityId: 'wallpaper', field: 'wallpaper'
             }, conflicts);

@@ -421,6 +421,8 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
             cursor: pointer;
+            /* 常驻独立合成层：把 hover 重绘隔离在卡片内，避免波及 body 的 fixed 背景导致全屏重光栅化 */
+            transform: translateZ(0);
         }
 
         .link-card:hover {
